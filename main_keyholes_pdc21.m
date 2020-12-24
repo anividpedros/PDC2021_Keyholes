@@ -2,6 +2,7 @@
 % 7th IAA Planetary Defense Conference 2021
 clc
 clear
+close all
 
 %% Script steps
 % 1. States of Earth and Asteroid
@@ -92,6 +93,7 @@ end
 F = figure(1);
 plot( tv/3600/24, d_eph )
 grid on
+hold on
 xlabel('dt (days)')
 ylabel('d (km)')
 
@@ -118,7 +120,8 @@ v_ast_O = state_ast_O(4:6);
 
 %% 4. Opik variables at pericenter
 % Unperturbed prop from SOI crossing to pericenter
-tv = (0:.25:24) *3600 ;
+tv = 0;
+tv = (0:.1:36) *3600 ;
 d  = zeros(length(tv),1);
 
 kep_ast_O = cspice_oscelt( state_ast_O, et_SOI, cons.GMe );
@@ -130,9 +133,15 @@ for i=1:length(tv)
     
 end
 
-plot( tv+(et_SOI-et)/3600/24, d )
+plot( (tv+et_SOI-et)/3600/24, d )
 
+MA_per = 0;
+a_ast_O = kep_ast_O(1)/(1 - kep_ast_O(2));
+n_ast_O = sqrt( -cons.GMe/a_ast_O(1)^3 );
+dt_per  = (MA_per - kep_ast_O(6))/n_ast_O;
 
+state_ast_per = cspice_conics( kep_ast_O, et_SOI + dt_per );
+plot( (et_SOI+dt_per-et)/3600/24, norm(state_ast_per), 'r+' )
 
 
 
