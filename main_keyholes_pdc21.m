@@ -7,9 +7,10 @@ close all
 %% Script steps
 % 1. States of Earth and Asteroid
 % 2. Find crossing of SOI
-% 2. Coordinates in Earth-Centered Orbital Frame
-% 3. Opik Variables at CA
-% 4. Scan for resonances (Compute Valsecchi circles)
+% 3. Coordinates in Earth-Centered Orbital Frame
+% 4. Opik Variables at CA
+% 5. Scan for resonances (Compute Valsecchi circles)
+% 6. Compute Keyholes
 
 %% 0. Constants
 
@@ -61,7 +62,7 @@ T_ast = 2*pi / sqrt(  cons.GMs/a_ast^3 ) ;
 % Reference units (km,km/s)
 % DU: Distance of the Earth from the Sun
 % TU: Such that mu = 1
-DU = norm( state_eat(4:6) );
+DU = norm( state_eat(1:3) );
 TU = sqrt(DU^3/cons.GMs);
 
 state_ast_nd = state_ast/DU ;
@@ -106,6 +107,7 @@ et_SOI = et + dt_SOI + tv(id_SOI-1);
 % plot( (tv(id_SOI))/3600/24, d_eph(id_SOI), 'r+' )
 % plot( (tv(id_SOI-1))/3600/24, d_eph(id_SOI-1), 'r+' )
 
+
 %% 3. Coordinates in the Earth-Centered orbital frame
 state_eat = cspice_spkezr( '3',    et_SOI, 'J2000', 'NONE', '0' );
 state_ast = cspice_spkezr( ast_id, et_SOI, 'J2000', 'NONE', '0' );
@@ -117,15 +119,12 @@ state_ast_O(4:6) = NO'*(state_ast(4:6) - state_eat(4:6));
 r_ast_O = state_ast_O(1:3);
 v_ast_O = state_ast_O(4:6);
 
-
-%% 4. Opik variables at pericenter
 % Unperturbed prop from SOI crossing to pericenter
 tv = 0;
 tv = (0:.1:36) *3600 ;
 d  = zeros(length(tv),1);
 
 kep_ast_O = cspice_oscelt( state_ast_O, et_SOI, cons.GMe );
-
 for i=1:length(tv)
     
     state_ast_t = cspice_conics(kep_ast_O, et_SOI + tv(i));
@@ -144,14 +143,110 @@ state_ast_per = cspice_conics( kep_ast_O, et_SOI + dt_per );
 plot( (et_SOI+dt_per-et)/3600/24, norm(state_ast_per), 'r+' )
 
 
+%% 4. Opik variables at b-plane
+U     = norm( v_ast_O );
+theta = acos( v_ast_O(2)/U );
+phi   = atan2( v_ast_O(1), v_ast_O(3) );
 
+h = cross( r_ast_O, v_ast_O ) ;
+b = norm(h)/U ;
 
+% Assume linear motion to find b-plane crossing
+xi   = r_ast_O(1)*cos(phi);
+zeta = r_ast_O(1)*cos(theta)*sin(phi) - r_ast_O(2)*sin(theta);
 
+%--------------------------------
+% There is something wrong here!
+%--------------------------------
 
+%% 5. Scan for resonances
+xi_nd = xi/DU;
+zeta_nd = zeta/DU;
+b_nd = sqrt(xi_nd^2 + zeta_nd^2);
+U_nd = U/(DU/TU);
+c_nd = (cons.GMe/cons.GMs)/U_nd^2;
+ct = cos(theta);
+st = sin(theta);
 
+b2 = b_nd*b_nd;
+c2 = c_nd*c_nd;
+U2 = U_nd*U_nd;
+aux1 = (b2+c2)*(1-U2);
+aux2 = -2*U_nd*( (b2-c2)*ct + 2*c_nd*zeta_nd*st );
 
+a_pre  = 1/(1-U2-2*U_nd*ct);
+a_post = (b2 + c2)/(aux1 + aux2);
 
+kmax = 20;
+hmax = 50;
 
+i = 0;
+circ = [];
+for k=1:kmax
+    for h=1:hmax
+        
+        i = i+1 ;
+        a0p(i) = (k/h)^(2/3);
+        if sum( find(a0p(i) == a0p(1:i-1)) ); continue; end
+        
+        ct0p = ( 1-U2-1/a0p(i) )/2/U_nd ;
+        if abs(ct0p) > 1; continue; end
+        st0p = sqrt(1 - ct0p^2);
+        
+        % Cirle center location and radius
+        D = (c_nd*st)/(ct0p - ct);
+        R = abs( c_nd*st0p/(ct0p - ct) );
+        
+        
+%         % Skip if doesn't intersect the (0,Rstar) circle
+%         % Does not make sense becaues we don't design maneuvers
+%         if ( (abs(D)<abs(R-Rstar)) || (abs(D)>(R+Rstar)) ); continue; end
+        
+        circ = [circ; 
+            k h D*DU R*DU];
+        
+    end
+end
+
+% Plot Valsecchi circles!
+F  = figure(2);
+
+nr = size(circ,1);
+co = winter(22);
+thv= 0:(2*pi/99):2*pi ;
+RE_km = 6378.140;
+sc = RE_km;
+
+focus_factor = sqrt(1 + 2*cons.GMe/(RE_km*U^2));
+RE_focussed  = focus_factor;
+
+for i=1:nr
+    
+    k = circ(i,1);
+    D = circ(i,3);    
+    R = circ(i,4);
+    
+    xi_circ   = R*cos(thv);
+    zeta_circ = D + R*sin(thv);
+    
+    cc = co(k,:);
+    plot( xi_circ/sc, zeta_circ/sc, 'Color', cc )
+    hold on
+    
+end
+
+fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
+plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
+plot(cos(thv), sin(thv),'k--');
+
+grid on
+axis equal
+caxis([1 20])
+cb = colorbar;
+cb.Label.String = 'k';
+axis([-1 1 -1 1]*10)
+xlabel('\xi (R_\oplus)');
+ylabel('\zeta (R_\oplus)');
 
 
 
