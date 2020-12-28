@@ -3,6 +3,7 @@
 clc
 clear
 close all
+addpath(genpath(pwd))
 
 %% Script steps
 % 1. States of Earth and Asteroid
@@ -26,14 +27,32 @@ cspice_furnsh( 'gm_de431.tpc' )
 cspice_furnsh( 'pck00010.tpc' )
 cspice_furnsh( [dir_local_de431 'de431_part-1.bsp'] )
 cspice_furnsh( [dir_local_de431 'de431_part-2.bsp'] )
-cspice_furnsh( '2021_PDC-s11-merged-DE431.bsp' )
+
+asteroid = 2; 
+%{ 1. 2021 PDC, 2. 2017 PDC }
+
+switch asteroid
+    case 1
+        cspice_furnsh( '2021_PDC-s11-merged-DE431.bsp' )
+        ast_id= '-937014';
+%         epoch = '2021 April 20 TDB';
+        epoch = '2021 October 18 TDB';
+        tv = (0:.25:24*2.2) *3600 ;
+        
+    case 2
+        cspice_furnsh( '2017_PDC-merged-DE431.bsp' )
+        ast_id= '-937001';
+%         epoch = '2027 July 20, 13:09:38.000 TDB';
+%         epoch = '2027 July 21, 08:17:15.999 TDB';
+        epoch = '2027 July 19 TDB';
+        tv = (0:.25:24*2.2) *3600 ;
+        
+end
 
 
 %% 1. States of Earth and Asteroid
 %-- Setup for 2021 PDC
-ast_id= '-937014';
-% epoch = '2021 April 20 TDB';
-epoch = '2021 October 18 TDB';
+
 et = cspice_str2et( epoch );
 EQ_2_EC = cspice_sxform( 'J2000', 'ECLIPJ2000', et );
 
@@ -77,7 +96,6 @@ T_eat_nd = T_eat/TU ;
 
 
 %% 2. Finding crossing of Sphere of Influence
-tv = (0:.25:24*2.2) *3600 ;
 d_eph = zeros(length(tv),1);
 
 SOI = a_eat*(cons.GMe/cons.GMs)^(2/5);
@@ -249,10 +267,45 @@ xlabel('\xi (R_\oplus)');
 ylabel('\zeta (R_\oplus)');
 
 
+%% 6. Keyhole computation
+% Section dependencies: scripts in 'keyholes'
 
+t0 = 0;
+m  = cons.GMe/cons.GMs ;
 
+F = figure(3);
+hold on
 
+sc = 6378.140/DU;
+for i=1:nr
+    k = circ(i,1);
+    h = circ(i,2);
+    D = circ(i,3)/RE_km;    
+    R = circ(i,4)/RE_km;    
+    
+    [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+        two_keyholes(k, h, D, R, U_nd, theta, phi, m,t0,DU);
+    
+    cc = co(k,:);    
+    plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
+        'Color',cc);
+    plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
+         'Color',cc);    
+    
+end
 
+fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
+plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
+plot(cos(thv), sin(thv),'k--');
+
+grid on
+axis equal
+caxis([1 20])
+cb = colorbar;
+cb.Label.String = 'k';
+% axis([-1 1 -1 1]*10)
+xlabel('\xi (R_\oplus)');
+ylabel('\zeta (R_\oplus)');
 
 
 
