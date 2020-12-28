@@ -58,8 +58,12 @@ EQ_2_EC = cspice_sxform( 'J2000', 'ECLIPJ2000', et );
 
 cons.AU  = cspice_convrt(1, 'AU', 'KM');
 cons.GMs = cspice_bodvrd( 'SUN', 'GM', 1 );
-cons.GMe = cspice_bodvrd( '3', 'GM', 1 );
-cons.Re  = mean( cspice_bodvrd( '399', 'RADII', 3 ) );
+% cons.GMe = cspice_bodvrd( '3', 'GM', 1 );
+cons.GMe = 398600.43543609593;
+
+% cons.Re  = mean( cspice_bodvrd( '399', 'RADII', 3 ) );
+cons.Re  = 6378.140;
+
 cons.yr  = 365.25 * 24 * 3600 ;
 cons.Day = 3600*24; 
 
@@ -160,6 +164,18 @@ dt_per  = (MA_per - kep_ast_O(6))/n_ast_O;
 state_ast_per = cspice_conics( kep_ast_O, et_SOI + dt_per );
 plot( (et_SOI+dt_per-et)/3600/24, norm(state_ast_per), 'r+' )
 
+% Select coordinates at node crossing
+TA_node = -kep_ast_O(5);
+MA_node = TA_2_MA( TA_node, kep_ast_O(2) );
+a_ast_O = kep_ast_O(1)/(1 - kep_ast_O(2));
+n_ast_O = sqrt( -cons.GMe/a_ast_O(1)^3 );
+dt_per  = (MA_node - kep_ast_O(6))/n_ast_O;
+
+state_ast_per = cspice_conics( kep_ast_O, et_SOI + dt_per );
+plot( (et_SOI+dt_per-et)/3600/24, norm(state_ast_per), 'r+' )
+
+% r_ast_O = state_ast_per(1:3);
+% v_ast_O = state_ast_per(4:6);
 
 %% 4. Opik variables at b-plane
 U     = norm( v_ast_O );
@@ -178,7 +194,7 @@ zeta = r_ast_O(1)*cos(theta)*sin(phi) - r_ast_O(2)*sin(theta);
 %--------------------------------
 
 %% 5. Scan for resonances
-xi_nd = xi/DU;
+xi_nd   = xi/DU;
 zeta_nd = zeta/DU;
 b_nd = sqrt(xi_nd^2 + zeta_nd^2);
 U_nd = U/(DU/TU);
@@ -189,11 +205,11 @@ st = sin(theta);
 b2 = b_nd*b_nd;
 c2 = c_nd*c_nd;
 U2 = U_nd*U_nd;
-aux1 = (b2+c2)*(1-U2);
-aux2 = -2*U_nd*( (b2-c2)*ct + 2*c_nd*zeta_nd*st );
+% aux1 = (b2+c2)*(1-U2);
+% aux2 = -2*U_nd*( (b2-c2)*ct + 2*c_nd*zeta_nd*st );
 
 a_pre  = 1/(1-U2-2*U_nd*ct);
-a_post = (b2 + c2)/(aux1 + aux2);
+% a_post = (b2 + c2)/(aux1 + aux2);
 
 kmax = 20;
 hmax = 50;
@@ -232,10 +248,9 @@ F  = figure(2);
 nr = size(circ,1);
 co = winter(22);
 thv= 0:(2*pi/99):2*pi ;
-RE_km = 6378.140;
-sc = RE_km;
+sc = cons.Re;
 
-focus_factor = sqrt(1 + 2*cons.GMe/(RE_km*U^2));
+focus_factor = sqrt(1 + 2*cons.GMe/(cons.Re*U^2));
 RE_focussed  = focus_factor;
 
 for i=1:nr
@@ -252,36 +267,52 @@ for i=1:nr
     hold on
     
 end
-
+colormap(co);
 fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
 plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
 plot(cos(thv), sin(thv),'k--');
+plot(3*cos(thv), 3*sin(thv),'k--');
 
 grid on
 axis equal
 caxis([1 20])
 cb = colorbar;
 cb.Label.String = 'k';
-axis([-1 1 -1 1]*10)
+axis([-1 1 -1 1]*5)
 xlabel('\xi (R_\oplus)');
 ylabel('\zeta (R_\oplus)');
+
+%% Compare results to file
+T = readtable('2017PDC_resonances_all.dat');
+
+circ2 = circ;
+circ2(:,3:4) = circ2(:,3:4)/sc ;
 
 
 %% 6. Keyhole computation
 % Section dependencies: scripts in 'keyholes'
 
+% Nominal Öpik parameters
+U = 0.44705634713083897;
+theta = 6.573081547432976E+01*pi/180;
+phi = 7.141024642502616E+01*pi/180;
+m = 3.0034896149157654e-06;
 t0 = 0;
-m  = cons.GMe/cons.GMs ;
+DU = 152003856.97586098;
+RE_au = cons.Re/DU;
+
+% t0 = 0;
+% m  = cons.GMe/cons.GMs ;
 
 F = figure(3);
 hold on
 
-sc = 6378.140/DU;
+sc = cons.Re/DU;
 for i=1:nr
     k = circ(i,1);
     h = circ(i,2);
-    D = circ(i,3)/RE_km;    
-    R = circ(i,4)/RE_km;    
+    D = circ(i,3)/cons.Re;    
+    R = circ(i,4)/cons.Re;    
     
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
         two_keyholes(k, h, D, R, U_nd, theta, phi, m,t0,DU);
@@ -293,17 +324,18 @@ for i=1:nr
          'Color',cc);    
     
 end
-
+colormap(co);
 fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
 plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
 plot(cos(thv), sin(thv),'k--');
+plot(3*cos(thv), 3*sin(thv),'k--');
 
 grid on
 axis equal
 caxis([1 20])
 cb = colorbar;
 cb.Label.String = 'k';
-% axis([-1 1 -1 1]*10)
+axis([-1 1 -1 1]*5)
 xlabel('\xi (R_\oplus)');
 ylabel('\zeta (R_\oplus)');
 
