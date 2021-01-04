@@ -54,10 +54,9 @@ end
 %-- Setup for 2021 PDC
 
 et = cspice_str2et( epoch );
-EQ_2_EC = cspice_sxform( 'J2000', 'ECLIPJ2000', et );
 
 cons.AU  = cspice_convrt(1, 'AU', 'KM');
-cons.GMs = cspice_bodvrd( 'SUN', 'GM', 1 );
+cons.GMs = cspice_bodvrd( 'SUN', 'GM', 10 );
 % cons.GMe = cspice_bodvrd( '3', 'GM', 1 );
 cons.GMe = 398600.43543609593;
 
@@ -67,12 +66,10 @@ cons.Re  = 6378.140;
 cons.yr  = 365.25 * 24 * 3600 ;
 cons.Day = 3600*24; 
 
-state_eat = cspice_spkezr( '3', et, 'J2000', 'NONE', '0' );
-state_eat = EQ_2_EC * state_eat;
+state_eat = cspice_spkezr( '399', et, 'ECLIPJ2000', 'NONE', '10' );
 kep_eat = cspice_oscelt( state_eat, et, cons.GMs );
 
-state_ast = cspice_spkezr( ast_id, et, 'J2000', 'NONE', '0' );
-state_ast = EQ_2_EC * state_ast;
+state_ast = cspice_spkezr( ast_id, et, 'ECLIPJ2000', 'NONE', '10' );
 kep_ast = cspice_oscelt( state_ast, et, cons.GMs );
 
 % Orbital periods
@@ -106,8 +103,8 @@ SOI = a_eat*(cons.GMe/cons.GMs)^(2/5);
 
 for i=1:length(tv) % Limit of ephemeris data
     
-    state_ast_t = cspice_spkezr( ast_id, et+tv(i), 'J2000', 'NONE', '0' );   
-    state_eat_t = cspice_spkezr( '3', et+tv(i), 'J2000', 'NONE', '0' );
+    state_ast_t = cspice_spkezr( ast_id, et+tv(i), 'ECLIPJ2000', 'NONE', '10' );   
+    state_eat_t = cspice_spkezr( '399',  et+tv(i), 'ECLIPJ2000', 'NONE', '10' );
     
     d_eph(i) = norm(state_ast_t(1:3) - state_eat_t(1:3));
     
@@ -129,69 +126,104 @@ et_SOI = et + dt_SOI + tv(id_SOI-1);
 % plot( (tv(id_SOI))/3600/24, d_eph(id_SOI), 'r+' )
 % plot( (tv(id_SOI-1))/3600/24, d_eph(id_SOI-1), 'r+' )
 
-
 %% 3. Coordinates in the Earth-Centered orbital frame
-state_eat = cspice_spkezr( '3',    et_SOI, 'J2000', 'NONE', '0' );
-state_ast = cspice_spkezr( ast_id, et_SOI, 'J2000', 'NONE', '0' );
-
-[NO, NO6] = HillRot_DCM(state_eat);
-state_ast_O = NO'*(state_ast(1:3) - state_eat(1:3));
-state_ast_O(4:6) = NO'*(state_ast(4:6) - state_eat(4:6));
-
-r_ast_O = state_ast_O(1:3);
-v_ast_O = state_ast_O(4:6);
-
-% Unperturbed prop from SOI crossing to pericenter
-tv = 0;
-tv = (0:.1:36) *3600 ;
-d  = zeros(length(tv),1);
-
-kep_ast_O = cspice_oscelt( state_ast_O, et_SOI, cons.GMe );
-for i=1:length(tv)
-    
-    state_ast_t = cspice_conics(kep_ast_O, et_SOI + tv(i));
-    d(i) = norm(state_ast_t(1:3)) ;
-    
+% Take same date as in script by Amato
+if asteroid == 2
+    epoch_inp   = '2027 July 21, 08:17:15.999 TDB';
+    et_inp = cspice_str2et( epoch_inp );
+    et_SOI = et_inp;
+    dt_SOI = et_SOI - et;
 end
 
+state_eat = cspice_spkezr( '399',  et_SOI, 'ECLIPJ2000', 'NONE', '10' );
+state_ast = cspice_spkezr( ast_id, et_SOI, 'ECLIPJ2000', 'NONE', '10' );
+state_ast_eat = cspice_spkezr( ast_id, et_SOI, 'ECLIPJ2000', 'NONE', '399' );
+
+DU = norm( state_eat(1:3) );
+TU = sqrt(DU^3/cons.GMs);
+
+state_ast_O = HillRot(state_eat, state_ast);
+r_ast_O = state_ast_O(1:3);
+v_ast_O = state_ast_O(4:6);
+plot( (et_SOI-et)/3600/24, norm(r_ast_O), 'ro' );
+
+
+% Unperturbed prop from SOI crossing to pericenter
+kep_ast_O = cspice_oscelt( state_ast_O, et_SOI, cons.GMe );
+
+% Plot coordinates given by hyperbolic elements
+tv = (-12:.1:36) *3600 ;
+d  = zeros(length(tv),1);
+for i=1:length(tv)
+    state_ast_t = cspice_conics(kep_ast_O, et_SOI + tv(i));
+    d(i) = norm(state_ast_t(1:3)) ;
+end
 plot( (tv+et_SOI-et)/3600/24, d )
 
+
+% Coordinates at perigee
 MA_per = 0;
+% Coordinates at node crossing
+% TA_node = -kep_ast_O(5);
+% MA_node = TA_2_MA( TA_node, kep_ast_O(2) );
+
 a_ast_O = kep_ast_O(1)/(1 - kep_ast_O(2));
 n_ast_O = sqrt( -cons.GMe/a_ast_O(1)^3 );
 dt_per  = (MA_per - kep_ast_O(6))/n_ast_O;
 
 state_ast_per = cspice_conics( kep_ast_O, et_SOI + dt_per );
+r_ast_O = state_ast_per(1:3);
+v_ast_O = state_ast_per(4:6);
+
 plot( (et_SOI+dt_per-et)/3600/24, norm(state_ast_per), 'r+' )
 
-% Select coordinates at node crossing
-TA_node = -kep_ast_O(5);
-MA_node = TA_2_MA( TA_node, kep_ast_O(2) );
-a_ast_O = kep_ast_O(1)/(1 - kep_ast_O(2));
-n_ast_O = sqrt( -cons.GMe/a_ast_O(1)^3 );
-dt_per  = (MA_node - kep_ast_O(6))/n_ast_O;
-
-state_ast_per = cspice_conics( kep_ast_O, et_SOI + dt_per );
-plot( (et_SOI+dt_per-et)/3600/24, norm(state_ast_per), 'r+' )
-
-% r_ast_O = state_ast_per(1:3);
-% v_ast_O = state_ast_per(4:6);
 
 %% 4. Opik variables at b-plane
-U     = norm( v_ast_O );
-theta = acos( v_ast_O(2)/U );
+% Coordinates at MTP - Perigee
+b     = norm( r_ast_O );
+V     = norm( v_ast_O );
+theta = acos( v_ast_O(2)/V );
 phi   = atan2( v_ast_O(1), v_ast_O(3) );
 
-h = cross( r_ast_O, v_ast_O ) ;
-b = norm(h)/U ;
+cp = cos(phi);   sp = sin(phi);
+ct = cos(theta); st = sin(theta);
 
-% Assume linear motion to find b-plane crossing
-xi   = r_ast_O(1)*cos(phi);
-zeta = r_ast_O(1)*cos(theta)*sin(phi) - r_ast_O(2)*sin(theta);
+Rphi = rotationM(-phi,2);
+Rth  = rotationM(-theta,1);
+ROT  = Rth*Rphi ;
+r_ast_b = ROT*r_ast_O;
 
-%--------------------------------
-% There is something wrong here!
-%--------------------------------
+xi   = r_ast_b(1);
+eta  = r_ast_b(2);
+zeta = r_ast_b(3);
+
+% CODE from processing.f90/CART_TO_OPIK does the rotation with +theta, +phi
+% verified by changing the sign in the call of rotationM for Rphi,Rth
+auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp];
+xi   = r_ast_O(1)*cp - r_ast_O(3)*sp;
+eta  = r_ast_O(1)*st*sp + r_ast_O(2)*ct + r_ast_O(3)*st*cp;
+zeta = r_ast_O(1)*ct*sp - r_ast_O(2)*st + r_ast_O(3)*ct*cp; 
+% At the moment, when trying to replicate the results, this is left as is.
+
+% Coordinates at TP
+
+% Asymptotic velocity
+U = sqrt( V*V - 2*cons.GMe/b );
+% Rescaling b-plane coordinates
+b    = (V/U)*b  ;
+xi   = (V/U)*xi ;
+zeta = (V/U)*zeta ;
+% Rotation of velocity vector
+hgamma = atan( cons.GMe/(b*U*U) );
+hv     = cross( r_ast_O, v_ast_O );
+DCM    = PRV_2_DCM( -hgamma, hv/norm(hv) );
+UVec   = (U/V)*DCM*v_ast_O;
+theta  = acos(UVec(2)/U);
+phi    = atan2(UVec(1),UVec(3));
+
+cp = cos(phi);   sp = sin(phi);
+ct = cos(theta); st = sin(theta);
+
 
 %% 5. Scan for resonances
 xi_nd   = xi/DU;
@@ -199,8 +231,6 @@ zeta_nd = zeta/DU;
 b_nd = sqrt(xi_nd^2 + zeta_nd^2);
 U_nd = U/(DU/TU);
 c_nd = (cons.GMe/cons.GMs)/U_nd^2;
-ct = cos(theta);
-st = sin(theta);
 
 b2 = b_nd*b_nd;
 c2 = c_nd*c_nd;
@@ -231,10 +261,12 @@ for k=1:kmax
         D = (c_nd*st)/(ct0p - ct);
         R = abs( c_nd*st0p/(ct0p - ct) );
         
-        
 %         % Skip if doesn't intersect the (0,Rstar) circle
-%         % Does not make sense becaues we don't design maneuvers
-%         if ( (abs(D)<abs(R-Rstar)) || (abs(D)>(R+Rstar)) ); continue; end
+        % Does not make sense becaues we don't design maneuvers
+        % However, if we don't include a filter, the keyhole search
+        % explodes for the very small circles
+        Rstar = 1*cons.Re/DU;
+        if ( (abs(D)<abs(R-Rstar)) || (abs(D)>(R+Rstar)) ); continue; end
         
         circ = [circ; 
             k h D*DU R*DU];
@@ -292,27 +324,38 @@ circ2(:,3:4) = circ2(:,3:4)/sc ;
 %% 6. Keyhole computation
 % Section dependencies: scripts in 'keyholes'
 
-% Nominal Öpik parameters
-U = 0.44705634713083897;
-theta = 6.573081547432976E+01*pi/180;
-phi = 7.141024642502616E+01*pi/180;
-m = 3.0034896149157654e-06;
-t0 = 0;
-DU = 152003856.97586098;
 RE_au = cons.Re/DU;
 
+%---- Choose new circles ----
+m  = cons.GMe/cons.GMs ;
+t0 = 0;
+circles = circ;
+
+%---- Choose precomputed circles ----
+% % Nominal Öpik parameters
+% U_nd = 0.44705634713083897;
+% theta = 6.573081547432976E+01*pi/180;
+% phi = 7.141024642502616E+01*pi/180;
+% m = 3.0034896149157654e-06;
 % t0 = 0;
-% m  = cons.GMe/cons.GMs ;
+% DU = 152003856.97586098;
+% 
+% circles = T{:,:};
+% circles(:,3:4) = circles(:,3:4)*cons.Re;
+% ------------------------------------
 
 F = figure(3);
 hold on
 
 sc = cons.Re/DU;
+nr = size(circles,1);
 for i=1:nr
-    k = circ(i,1);
-    h = circ(i,2);
-    D = circ(i,3)/cons.Re;    
-    R = circ(i,4)/cons.Re;    
+    
+    % New circles
+    k = circles(i,1);
+    h = circles(i,2);
+    D = circles(i,3)/cons.Re;    
+    R = circles(i,4)/cons.Re;    
     
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
         two_keyholes(k, h, D, R, U_nd, theta, phi, m,t0,DU);
