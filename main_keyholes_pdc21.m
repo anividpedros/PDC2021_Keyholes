@@ -422,7 +422,10 @@ v_ast_O1 = U_nd*(DU/TU)*[st*sp; ct; st*cp]
 state_ast_post = [r_ast_O1; v_ast_O1];
 state_eat = cspice_spkezr( '399',  et_SOI+dt_per, 'ECLIPJ2000', 'NONE', '10' );
 
-state_ast_post_sun = HillRotInv( state_eat, state_ast_post )
+state_ast_post_sun = HillRotInv( state_eat, state_ast_post );
+kep_ast_post = cspice_oscelt( state_ast_post_sun, et_SOI+dt_per, cons.GMs )
+
+
 
 
 
