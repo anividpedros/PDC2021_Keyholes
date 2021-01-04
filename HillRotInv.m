@@ -1,4 +1,4 @@
-function [Xo] = HillRot( Xp,Xa )
+function [Xo] = HillRotInv( Xp,Xa )
 
 % Setup of the frame:
 % Y as direction of velocity
@@ -13,11 +13,11 @@ hp = norm(He);
 Z  = He/hp;
 Y  = Vp/vp;
 X  = cross( Y, Z );
-ON = [X Y Z]';
+NO = [X Y Z]';
 
-Xo = ON*(Xp(1:3) - Xa(1:3));
+Xo = Xp(1:3) + NO*Xa(1:3);
 
 wp = (hp/rp/rp)*Z ;
 vr = cross(wp,Xo) ;
 
-Xo(4:6) = ON*(Xa(4:6) - Xp(4:6) - vr);
+Xo(4:6) = NO*Xa(4:6) + Xp(4:6) + vr;

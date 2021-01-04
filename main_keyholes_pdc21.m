@@ -199,16 +199,19 @@ zeta = r_ast_b(3);
 
 % CODE from processing.f90/CART_TO_OPIK does the rotation with +theta, +phi
 % verified by changing the sign in the call of rotationM for Rphi,Rth
+% Valsecchi[2003] does the rotation by -theta, -phi!
 auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp];
 xi   = r_ast_O(1)*cp - r_ast_O(3)*sp;
 eta  = r_ast_O(1)*st*sp + r_ast_O(2)*ct + r_ast_O(3)*st*cp;
 zeta = r_ast_O(1)*ct*sp - r_ast_O(2)*st + r_ast_O(3)*ct*cp; 
 % At the moment, when trying to replicate the results, this is left as is.
+% And it makes sense, the result is eta = 0!
 
 % Coordinates at TP
 
 % Asymptotic velocity
-U = sqrt( V*V - 2*cons.GMe/b );
+GME = cons.GMe;
+U = sqrt( V*V - 2*GME/b );
 % Rescaling b-plane coordinates
 b    = (V/U)*b  ;
 xi   = (V/U)*xi ;
@@ -265,8 +268,8 @@ for k=1:kmax
         % Does not make sense becaues we don't design maneuvers
         % However, if we don't include a filter, the keyhole search
         % explodes for the very small circles
-        Rstar = 1*cons.Re/DU;
-        if ( (abs(D)<abs(R-Rstar)) || (abs(D)>(R+Rstar)) ); continue; end
+%         Rstar = 1*cons.Re/DU;
+%         if ( (abs(D)<abs(R-Rstar)) || (abs(D)>(R+Rstar)) ); continue; end
         
         circ = [circ; 
             k h D*DU R*DU];
@@ -384,6 +387,42 @@ ylabel('\zeta (R_\oplus)');
 
 
 
+%% Example of MOID variation over time
+% Pick flyby from the keyholes
+
+kref = 15;
+i = find( circles(:,1) == kref, 1 );
+
+k = circles(i,1);
+h = circles(i,2);
+D = circles(i,3)/cons.Re;
+R = circles(i,4)/cons.Re;
+
+[kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+    two_keyholes(k, h, D, R, U_nd, theta, phi, m,t0,DU);
+
+% Find a point close to xi=0 (arbitrary choice)
+[~,ik] = min( abs(kh_up_xi) );
+xi0   = kh_up_xi(ik);
+zeta0 = kh_up_zeta(ik);
+
+% Find post-encounter Opik coordinates
+[zeta2,theta1,phi1,xi1,zeta1] = opik_next(U_nd,theta,phi,xi0(1),zeta0(1),t0,h);
+
+% Post-encounter Opik to Cartesisan
+cp = cos(phi1);   sp = sin(phi1);
+ct = cos(theta1); st = sin(theta1);
+auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp]';
+
+r_ast_O1 = DU*auxR*[xi1; 0; zeta1]
+v_ast_O1 = U_nd*(DU/TU)*[st*sp; ct; st*cp]
+
+% Assuming the encounter is instantaneous, et_1 = et_SOI + dt_per
+% Generate heliocentric elements
+state_ast_post = [r_ast_O1; v_ast_O1];
+state_eat = cspice_spkezr( '399',  et_SOI+dt_per, 'ECLIPJ2000', 'NONE', '10' );
+
+state_ast_post_sun = HillRotInv( state_eat, state_ast_post )
 
 
 
