@@ -15,9 +15,10 @@ Y  = Vp/vp;
 X  = cross( Y, Z );
 NO = [X Y Z]';
 
-Xo = Xp(1:3) + NO*Xa(1:3);
+dx = NO*Xa(1:3);
+Xo = Xp(1:3) + dx;
 
 wp = (hp/rp/rp)*Z ;
-vr = cross(wp,Xo) ;
+vr = cross(wp,dx) ;
 
 Xo(4:6) = NO*Xa(4:6) + Xp(4:6) + vr;
