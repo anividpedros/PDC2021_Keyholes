@@ -3,6 +3,11 @@
 clc
 clear
 close all
+
+filename = 'main_keyholes_pdc21.m';
+filepath = matlab.desktop.editor.getActiveFilename;
+currPath = filepath(1:(end-length(filename)));
+cd(currPath)
 addpath(genpath(pwd))
 
 %% Script steps
@@ -381,7 +386,7 @@ axis equal
 caxis([1 20])
 cb = colorbar;
 cb.Label.String = 'k';
-axis([-1 1 -1 1]*5)
+axis([-1 1 -1 1]*30)
 xlabel('\xi (R_\oplus)');
 ylabel('\zeta (R_\oplus)');
 
@@ -391,18 +396,22 @@ ylabel('\zeta (R_\oplus)');
 %% Pick flyby from the keyholes and generate ICs
 
 kref = 15;
-i = find( circles(:,1) == kref, 1 );
+ic = find( circles(:,1) == kref, 1 );
+ic = 142;
 
-k = circles(i,1);
-h = circles(i,2);
-D = circles(i,3)/cons.Re;
-R = circles(i,4)/cons.Re;
+k = circles(ic,1);
+h = circles(ic,2);
+D = circles(ic,3)/cons.Re;
+R = circles(ic,4)/cons.Re;
 
 [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
     two_keyholes(k, h, D, R, U_nd, theta, phi, m,t0,DU);
 
-% Find a point close to xi=0 (arbitrary choice)
-[~,ik] = min( abs(kh_up_xi) );
+% 1. Find a point close to xi=0 (arbitrary choice)
+% [~,ik] = min( abs(kh_up_xi) );
+% 2. Find the first point of the keyhole arc (arbirary as well)
+ik = find( ~isnan(kh_up_xi), 1 ); 
+
 xi0   = kh_up_xi(ik);
 zeta0 = kh_up_zeta(ik);
 
@@ -414,11 +423,11 @@ cp = cos(phi1);   sp = sin(phi1);
 ct = cos(theta1); st = sin(theta1);
 auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp]';
 
-% Rphi = rotationM(-phi1,2);
-% Rth  = rotationM(-theta1,1);
-% auxR  = Rth*Rphi ;
+Rphi = rotationM(-phi1,2);
+Rth  = rotationM(-theta1,1);
+auxR  = Rth*Rphi ;
 
-r_ast_O1 = DU*auxR*[xi1; 0; zeta1]
+r_ast_O1 = DU*auxR'*[xi1; 0; zeta1]
 v_ast_O1 = U_nd*(DU/TU)*[st*sp; ct; st*cp]
 
 % Assuming the encounter is instantaneous, et_1 = et_SOI + dt_per
@@ -429,32 +438,32 @@ state_eat = cspice_spkezr( '399',  et_SOI+dt_per, 'ECLIPJ2000', 'NONE', '10' );
 state_ast_post_sun = HillRotInv( state_eat, state_ast_post );
 kep_ast_post = cspice_oscelt( state_ast_post_sun, et_SOI+dt_per, cons.GMs )
 
-
-%% Propagation
-et0  = et_SOI+dt_per;
-kep0 = kep_ast_post;
-kep0(1) = kep0(1)/(1-kep0(2));
+% Propagation
+et0      = et_SOI+dt_per;
+kep0     = kep_ast_post;
+kep0_sma = kep_ast_post';
+kep0_sma(1) = kep0(1)/(1-kep0(2));
 
 kepE = cspice_oscelt( state_eat, et_SOI+dt_per, cons.GMs );
-kepE(1) = kepE(1)/(1-kepE(2));
-kepE = kepE';
+kepE_sma = kepE';
+kepE_sma(1) = kepE(1)/(1-kepE(2));
 
-MOID0 = MOID_SDG_win( kep0([1 2 4 3 5]), kepE([1 2 4 3 5]) );
+MOID0 = MOID_SDG_win( kep0_sma([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
 
 state_jup = cspice_spkezr( '5',  et_SOI+dt_per, 'ECLIPJ2000', 'NONE', '10' );
 kepJ = cspice_oscelt( state_jup, et_SOI+dt_per, cons.GMs );
-kepJ(1) = kepJ(1)/(1-kepJ(2));
-kepJ = kepJ';
+kepJ_sma = kepJ;
+kepJ_sma(1) = kepJ(1)/(1-kepJ(2));
 
 % Secular Model: Lagrange-Laplace
-cons.OEp = kepJ;
+cons.OEp = kepJ';
 cons.GMp = cspice_bodvrd( '5', 'GM', 1 );
-secular_model_LL = secular_model_10BP_s2(kep0', cons, 1);
-tv = (0.5:.05:50) *cons.yr;
+secular_model_LL = secular_model_10BP_s2(kep0_sma, cons, 1);
+tv = (0.:.05:50) *cons.yr;
 for i = 1:length(tv)
     
-    [~,kep0_LL_t(i,:)] = drifted_oe_s2( secular_model_LL, tv(i), kep0, kepJ );
-    moid_LL_t(i) = MOID_SDG_win( kep0_LL_t(i,[1 2 4 3 5]), kepE([1 2 4 3 5]) );
+    [~,kep0_LL_t(i,:)] = drifted_oe_s2( secular_model_LL, tv(i), kep0_sma, kepJ' );
+    moid_LL_t(i) = MOID_SDG_win( kep0_LL_t(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
     
 end
 
@@ -465,19 +474,22 @@ X0 = cspice_conics(kep0, et0+tv(1) );
 cons_ode.GMcentral = cons.GMs;
 cons_ode.GMthird  = cons.GMe;
 cons_ode.GMfourth = cons.GMp(1);
-cons_ode.OEp   = kepE';
-cons_ode.OEp2  = kepJ';
+cons_ode.OEp   = kepE;
+cons_ode.OEp2  = kepJ;
 cons_ode.JD0_p = et0;
 
 tol = 1e-13;
 options=odeset('RelTol',tol,'AbsTol',ones(1,6)*tol);
 [t,X]=ode113(@(t,X) multibodies_3rd4th_oe(t,X,cons_ode),tv,X0,options);
 for i=1:length(tv)
-    kep0_4bp_t(i,:) = cspice_oscelt( X(i,:)', et0+tv(i), cons.GMs );
-    moid_4bp_t(i) = MOID_SDG_win( kep0_4bp_t(i,[1 2 4 3 5]), kepE([1 2 4 3 5]) );
+    kep0_4bp = cspice_oscelt( X(i,:)', et0+tv(i), cons.GMs );
+    kep0_4bp_t(i,:) = kep0_4bp;
+    kep0_4bp_t(i,1) = kep0_4bp_t(i,1)/(1-kep0_4bp_t(i,2));
+    
+    moid_4bp_t(i) = MOID_SDG_win( kep0_4bp_t(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
     
     % Compute distance to Earth
-    xe   = cspice_conics(kepE', et0+tv(i) );
+    xe   = cspice_conics(kepE, et0+tv(i) );
     d(i) = norm(xe(1:3) - X(i,1:3)'); % From 4bp integration
     
     xa   = cspice_conics(kep0, et0+tv(i) );
@@ -518,3 +530,82 @@ xlabel('time (yr)')
 ylabel('d (R_\oplus)')
 
 legend('4BP','post-enc')
+
+
+%% New Keyhole radius with that MOID:
+F = figure(10); clf;
+hold on
+
+% kref = 15; % takes 141:158
+% ic = find( circles(:,1) == kref, 1 );
+
+profile clear
+profile on
+
+
+co = summer(22);
+sc = cons.Re/DU;
+nr = size(circles,1);
+% for i=find( circles(:,1) == kref )
+for i= 1:nr %142%141:158 %ic%:nr
+    
+    % New circles
+    k = circles(i,1);
+    h = circles(i,2);
+    D = circles(i,3)/cons.Re;    
+    R = circles(i,4)/cons.Re;    
+    
+    it = find( tv/cons.yr == k );
+    
+    [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+        two_keyholes(k, h, D, R, U_nd, theta, phi, m,t0,DU );
+
+    cc = co(k,:);
+    plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
+        'Color',cc, 'LineWidth',2.5);
+    plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
+         'Color',cc, 'LineWidth',2.5);    
+    
+    % We are assuming for this preliminar computation that the same
+    % deltaMOID happens for all the points of the circle
+    dxi_num = moid_4bp_t(it)/DU - xi1;
+    dxi_LL  = moid_LL_t(it)/DU - xi1;
+    
+    [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+        two_keyholes_dxi(k, h, D, R, U_nd, theta, phi, m,t0,DU, dxi_num);
+    
+    plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
+        'r');
+    plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
+        'r');   
+
+     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+        two_keyholes_dxi(k, h, D, R, U_nd, theta, phi, m,t0,DU, dxi_LL);
+    
+    plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
+        'b');
+    plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
+        'b');   
+    
+    
+end
+
+colormap(co);
+fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
+plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
+plot(cos(thv), sin(thv),'k--');
+plot(3*cos(thv), 3*sin(thv),'k--');
+
+grid on
+axis equal
+caxis([1 20])
+cb = colorbar;
+cb.Label.String = 'k';
+% axis([-1 1 -1 1]*5)
+xlabel('\xi (R_\oplus)');
+ylabel('\zeta (R_\oplus)');
+
+% xlim([-20 20 ])
+
+profile viewer
+profile off
