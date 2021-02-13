@@ -1,9 +1,9 @@
-function [zeta2,theta1,phi1,xi1,zeta1] = opik_next(U,theta,phi,xi,zeta,t0,h)
+function [zeta2,theta1,phi1,xi1,zeta1] = opik_next(U,theta,phi,xi,zeta,t0,h,m)
 % Propagates Öpik state vector from one encounter to the one taking place
 % "h" asteroid periods afterwards.
 
 % Earth mass (solar masses)
-m = 3.0034896149157658e-06;
+% m = 3.0034896149157658e-06;
 
 %% 1. Propagate from pre- to post-encounter quantities
 

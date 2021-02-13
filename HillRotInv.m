@@ -13,7 +13,7 @@ hp = norm(He);
 Z  = He/hp;
 Y  = Vp/vp;
 X  = cross( Y, Z );
-NO = [X Y Z]';
+NO = [X Y Z];
 
 dx = NO*Xa(1:3);
 Xo = Xp(1:3) + dx;

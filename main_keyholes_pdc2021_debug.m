@@ -81,26 +81,24 @@ TU = sqrt(DU^3/cons.GMs);
 
 %% 3. Switch to geocentric and find time periapses
 % Planetocentric frame definition (Valsecchi 2003):
-% Y: Direction of motion of the planet
-% X: Sun on negative -X
+% Y: Direction of motion of the planet;
+% X: Sun on negative -X;
 % Z: Completes
 state_ast_O = HillRot(state_eat, state_ast);
-r_ast_O = state_ast_O(1:3);
-v_ast_O = state_ast_O(4:6);
-kep_ast_O = cspice_oscelt( state_ast_O, et, cons.GMe );
+kep_ast_O   = cspice_oscelt( state_ast_O, et, cons.GMe );
 
 % Find periapsis time
 MA_per = 0;
 
 a_ast_O = kep_ast_O(1)/(1 - kep_ast_O(2));
 n_ast_O = sqrt( -cons.GMe/a_ast_O(1)^3 );
-dt_per  = -(MA_per - kep_ast_O(6))/n_ast_O;
+dt_per  = (MA_per - kep_ast_O(6))/n_ast_O;
 
 
 %% 4. MTP coordinates
-% Kind off explained in Farnocchia 2019 (being closest approach).
+% Kind of explained in Farnocchia 2019 (being closest approach).
 % Cartesian to Opik coordinates: generic, as in Valsecchi2003/Valsecchi2015
-state_ast_per = cspice_conics( kep_ast_O, et - dt_per );
+state_ast_per = cspice_conics( kep_ast_O, et + dt_per );
 r_ast_O = state_ast_per(1:3);
 v_ast_O = state_ast_per(4:6);
 
@@ -139,10 +137,6 @@ phi    = atan2(UVec(1),UVec(3));
 
 v_b_pre = UVec;
 
-cp = cos(phi);   sp = sin(phi);
-ct = cos(theta); st = sin(theta);
-
-
 %% 6. Post-encounter coordinates
 % Code from Amato, probably Valsecchi 2003
 U_nd = U/(DU/TU);
@@ -159,9 +153,94 @@ h    = 0;   % Number of revolutions until next encounter: only used for zeta2
 ap    = kep_eat(1)/DU ;
 longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense should be longitude
 
-kep_post_sma = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U_nd,phi,longp,ap )
+kep_post_sma = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U_nd,phi,longp,ap );
+kep_ast_post = kep_post_sma';
+kep_ast_post(1) = kep_ast_post(1)*(1-kep_ast_post(2))*DU ;
+
 
 
 %% ========= Plotting for verification =========
+% - 3D trajectory in orbit frame
+% - 3D trajectory in inertial orbits
+
+% Distance(t) - Validate delta t
+
+figure(1); sc = cons.Re;
+plot( dt_per/3600/24, norm(r_ast_O)/sc, 'ro' );
+grid on
+hold on
+xlabel('dt (days)')
+ylabel('d (R_E)')
+
+tv = (-24*5:1:24*5) *3600 ;
+d  = zeros(length(tv),1);
+for i=1:length(tv)
+    state_ast_t = cspice_conics(kep_ast_O, et + tv(i)); % Why negative?
+    d(i) = norm(state_ast_t(1:3)) ;
+    
+    dr_ast_hyp(i,:) = state_ast_t(1:3);    
+end
+
+figure(1);
+plot( tv/3600/24, d/sc )
+
+
+%% Compare to numerical integration
+t0 = et - 4*86400 ;
+state_ast_t0 = cspice_conics(kep_ast_O, t0);
+state_eat_t0 = cspice_conics(kep_eat, t0);
+X0 = HillRotInv( state_eat_t0, state_ast_t0 );
+
+state_jup = cspice_spkezr( '5',   t0, 'ECLIPJ2000', 'NONE', '10' );
+kep_jup = cspice_oscelt( state_jup, t0, cons.GMs );
+
+tint = (0:1:24*8)*3600;
+
+cons_ode.GMcentral = cons.GMs;
+cons_ode.GMthird   = cons.GMe;
+cons_ode.GMfourth  = 0;
+cons_ode.OEp   = kep_eat;
+cons_ode.OEp2  = kep_jup;
+cons_ode.JD0_p = t0;
+
+tol = 1e-13;
+options=odeset('RelTol',tol,'AbsTol',ones(1,6)*tol);
+[~,X]=ode113(@(t,X) multibodies_3rd4th_oe(t,X,cons_ode),tint,X0,options);
+for i=1:length(tint)
+        
+    kep_4bp = cspice_oscelt( X(i,:)', t0 + tint(i), cons.GMs );
+    kep_4bp_t(i,:) = kep_4bp;
+    kep_4bp_t(i,1) = kep_4bp_t(i,1)/(1-kep_4bp_t(i,2));
+    
+    % moid_4bp_t(i) = MOID_SDG_win( kep0_4bp_t(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
+    
+    % Compute distance to Earth
+    xe   = cspice_conics(kep_eat, tint(i)+t0 );
+    d_int(i) = norm(xe(1:3) - X(i,1:3)'); % From 4bp integration
+    
+%     xa   = cspice_conics(kep0, et0+tv(i) );
+%     d2(i)= norm(xe(1:3) - xa(1:3)); % From post-encounter elements
+    
+end
+
+figure(1)
+tp = tint + t0 - et ;
+plot( tp(1)/86400, norm(state_ast_t0(1:3))/sc, 'go' )
+plot( tp/86400, d_int/sc )
+
+
+%% Compare orbit elements
+plot_oe_evolution( 'oe', tint, kep_4bp_t, 15, 'm', tint([1 end])/86400, 86400 )
+
+
+
+%% Do HillRot and HillRotInv go completely back and forth?
+
+state_ast = cspice_conics(kep_ast, et );
+state_eat = cspice_conics(kep_eat, et );
+
+state_ast_O = HillRot(state_eat, state_ast);
+
+state_ast_2 = HillRotInv(state_eat, state_ast_O);
 
 

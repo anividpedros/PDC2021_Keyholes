@@ -15,7 +15,7 @@ Y  = Vp/vp;
 X  = cross( Y, Z );
 ON = [X Y Z]';
 
-dx = Xp(1:3) - Xa(1:3);
+dx = Xa(1:3) - Xp(1:3);
 Xo = ON*dx;
 
 wp = (hp/rp/rp)*Z ;
