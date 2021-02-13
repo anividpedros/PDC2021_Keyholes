@@ -80,6 +80,10 @@ TU = sqrt(DU^3/cons.GMs);
 
 
 %% 3. Switch to geocentric and find time periapses
+% Planetocentric frame definition (Valsecchi 2003):
+% Y: Direction of motion of the planet
+% X: Sun on negative -X
+% Z: Completes
 state_ast_O = HillRot(state_eat, state_ast);
 r_ast_O = state_ast_O(1:3);
 v_ast_O = state_ast_O(4:6);
@@ -94,6 +98,8 @@ dt_per  = -(MA_per - kep_ast_O(6))/n_ast_O;
 
 
 %% 4. MTP coordinates
+% Kind off explained in Farnocchia 2019 (being closest approach).
+% Cartesian to Opik coordinates: generic, as in Valsecchi2003/Valsecchi2015
 state_ast_per = cspice_conics( kep_ast_O, et - dt_per );
 r_ast_O = state_ast_per(1:3);
 v_ast_O = state_ast_per(4:6);
@@ -114,6 +120,8 @@ zeta_p = r_ast_O(1)*ct*sp - r_ast_O(2)*st + r_ast_O(3)*ct*cp;
 
 
 %% 5. MTP to TP
+% As in code by Amato, not sure of the reference
+
 % Asymptotic velocity
 GME = cons.GMe;
 U = sqrt( V*V - 2*GME/b_p );
@@ -136,6 +144,7 @@ ct = cos(theta); st = sin(theta);
 
 
 %% 6. Post-encounter coordinates
+% Code from Amato, probably Valsecchi 2003
 U_nd = U/(DU/TU);
 m = cons.GMe/cons.GMs;
 
@@ -146,6 +155,7 @@ h    = 0;   % Number of revolutions until next encounter: only used for zeta2
 
 
 %% 7. New heliocentric elements
+% Equations in Valsecchi2015
 ap    = kep_eat(1)/DU ;
 longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense should be longitude
 
