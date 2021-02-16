@@ -71,7 +71,7 @@ kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
 kep_ast(6) = kep_ast(6)-0.0111; % Adjust timing for very close flyby
 
 % Generate states moments before the flyby
-dt = 0; %-3*24 * 86400;
+dt = 0;%-.2*24 * 86400;
 
 state_ast = cspice_conics(kep_ast, et + dt);
 state_eat = cspice_conics(kep_eat, et + dt);
@@ -182,7 +182,7 @@ for i=1:length(tv)
 end
 
 figure(1);
-plot( tv/3600/24, d/sc )
+plot( tv/3600/24, d/sc, 'b' )
 
 
 %% Compare to numerical integration
@@ -218,15 +218,26 @@ for i=1:length(tint)
     xe   = cspice_conics(kep_eat, tint(i)+t0 );
     d_int(i) = norm(xe(1:3) - X(i,1:3)'); % From 4bp integration
     
-%     xa   = cspice_conics(kep0, et0+tv(i) );
-%     d2(i)= norm(xe(1:3) - xa(1:3)); % From post-encounter elements
+    state_ast_hel_t = cspice_conics(kep_ast, tint(i)+t0);
+    state_eat_hel_t = cspice_conics(kep_eat, tint(i)+t0);
+
+    d2(i)= norm(state_ast_hel_t(1:3) - state_eat_hel_t(1:3)); % From heliocentric elements
     
 end
 
 figure(1)
 tp = tint + t0 - et ;
 plot( tp(1)/86400, norm(state_ast_t0(1:3))/sc, 'go' )
-plot( tp/86400, d_int/sc )
+plot( tp/86400, d_int/sc, 'm' )
+
+state_ast_t0_hel = cspice_conics(kep_ast, t0);
+plot( tp(1)/86400, norm(state_ast_t0_hel(1:3)-state_eat_t0(1:3))/sc, 'b+')
+
+plot( tp/86400, d2/sc, 'c--' )
+
+state_ast_0 = cspice_conics(kep_ast, et + dt);
+state_eat_0 = cspice_conics(kep_eat, et + dt);
+plot( 0/86400, norm(state_ast_0(1:3)-state_eat_0(1:3))/sc, 'k+')
 
 
 %% Compare orbit elements
@@ -240,7 +251,44 @@ state_ast = cspice_conics(kep_ast, et );
 state_eat = cspice_conics(kep_eat, et );
 
 state_ast_O = HillRot(state_eat, state_ast);
-
 state_ast_2 = HillRotInv(state_eat, state_ast_O);
+
+
+%% How about full conversion between Geocentric and Heliocentric?
+state_ast = cspice_conics(kep_ast, et );
+state_eat = cspice_conics(kep_eat, et );
+
+state_ast_O = HillRot(state_eat, state_ast);
+
+kep_ast_O   = cspice_oscelt( state_ast_O, et, cons.GMe );
+
+state_ast_O2 = cspice_conics( kep_ast_O, et );
+
+state_ast_2 = HillRotInv( state_eat, state_ast_O2 );
+
+kep_ast_2 = cspice_oscelt( state_ast_2, et, cons.GMs );
+kep_ast;
+
+
+%% Check initial heliocentric elements
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
