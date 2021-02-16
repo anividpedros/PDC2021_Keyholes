@@ -23,6 +23,7 @@ addpath(genpath(pwd))
 %% Code To-Do
 % - Substitute cspice_conics calls
 % - Delta t's of the encounter
+% - !!! If Earth not circular, review definition of Hill Frame
 
 %% 1. Read heliocentric elements
 mice_local_path = 'C:\Users\Oscar\odrive\Google Drive (2)\MSc-ASEN\Research\Code2020\EncountersCode\mice';
@@ -71,10 +72,11 @@ kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
 kep_ast(6) = kep_ast(6)-0.0111; % Adjust timing for very close flyby
 
 % Generate states moments before the flyby
-dt = 0;%-.2*24 * 86400;
+dt = -4*24 * 3600;
+t0 = et + dt;
 
-state_ast = cspice_conics(kep_ast, et + dt);
-state_eat = cspice_conics(kep_eat, et + dt);
+state_ast = cspice_conics(kep_ast, t0);
+state_eat = cspice_conics(kep_eat, t0);
 DU = norm( state_eat(1:3) );
 TU = sqrt(DU^3/cons.GMs);
 
@@ -85,7 +87,7 @@ TU = sqrt(DU^3/cons.GMs);
 % X: Sun on negative -X;
 % Z: Completes
 state_ast_O = HillRot(state_eat, state_ast);
-kep_ast_O   = cspice_oscelt( state_ast_O, et, cons.GMe );
+kep_ast_O   = cspice_oscelt( state_ast_O, t0, cons.GMe );
 
 % Find periapsis time
 MA_per = 0;
@@ -98,12 +100,12 @@ dt_per  = (MA_per - kep_ast_O(6))/n_ast_O;
 %% 4. MTP coordinates
 % Kind of explained in Farnocchia 2019 (being closest approach).
 % Cartesian to Opik coordinates: generic, as in Valsecchi2003/Valsecchi2015
-state_ast_per = cspice_conics( kep_ast_O, et + dt_per );
+state_ast_per = cspice_conics( kep_ast_O, t0 + dt_per );
 r_ast_O = state_ast_per(1:3);
 v_ast_O = state_ast_per(4:6);
 
 % Coordinates at MTP - Perigee
-b_p   = norm( r_ast_O );
+b_p   = norm( r_ast_O )
 V     = norm( v_ast_O );
 theta = acos( v_ast_O(2)/V );
 phi   = atan2( v_ast_O(1), v_ast_O(3) );
@@ -135,14 +137,14 @@ UVec   = (U/V)*DCM*v_ast_O;
 theta  = acos(UVec(2)/U);
 phi    = atan2(UVec(1),UVec(3));
 
-v_b_pre = UVec;
+v_b_pre = UVec /(DU/TU)
 
 %% 6. Post-encounter coordinates
 % Code from Amato, probably Valsecchi 2003
 U_nd = U/(DU/TU);
 m = cons.GMe/cons.GMs;
 
-t0   = et + dt_per ;
+% t0   = et + dt_per ;
 h    = 0;   % Number of revolutions until next encounter: only used for zeta2
 
 [~,theta1,phi1,xi1,zeta1] = opik_next(U_nd,theta,phi,xi/DU,zeta/DU,t0,h,m);
@@ -150,12 +152,12 @@ h    = 0;   % Number of revolutions until next encounter: only used for zeta2
 
 %% 7. New heliocentric elements
 % Equations in Valsecchi2015
-ap    = kep_eat(1)/DU ;
+ap    = kep_eat(1)/(1-kep_eat(2))/DU ;
 longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense should be longitude
 
 kep_post_sma = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U_nd,phi,longp,ap );
 kep_ast_post = kep_post_sma';
-kep_ast_post(1) = kep_ast_post(1)*(1-kep_ast_post(2))*DU ;
+kep_ast_post(1) = kep_ast_post(1)*(1-kep_ast_post(2))*DU 
 
 
 
@@ -175,7 +177,7 @@ ylabel('d (R_E)')
 tv = (-24*5:1:24*5) *3600 ;
 d  = zeros(length(tv),1);
 for i=1:length(tv)
-    state_ast_t = cspice_conics(kep_ast_O, et + tv(i)); % Why negative?
+    state_ast_t = cspice_conics(kep_ast_O, t0 + tv(i)); % Why negative?
     d(i) = norm(state_ast_t(1:3)) ;
     
     dr_ast_hyp(i,:) = state_ast_t(1:3);    
@@ -186,10 +188,12 @@ plot( tv/3600/24, d/sc, 'b' )
 
 
 %% Compare to numerical integration
-t0 = et - 4*86400 ;
+% t0 = et - 4*86400 ;
 state_ast_t0 = cspice_conics(kep_ast_O, t0);
-state_eat_t0 = cspice_conics(kep_eat, t0);
+state_eat_t0 = cspice_conics(kep_eat,   t0);
 X0 = HillRotInv( state_eat_t0, state_ast_t0 );
+
+% X0 = cspice_conics(kep_ast, t0);
 
 state_jup = cspice_spkezr( '5',   t0, 'ECLIPJ2000', 'NONE', '10' );
 kep_jup = cspice_oscelt( state_jup, t0, cons.GMs );
@@ -226,7 +230,7 @@ for i=1:length(tint)
 end
 
 figure(1)
-tp = tint + t0 - et ;
+tp = tint ;%+ t0 - et ;
 plot( tp(1)/86400, norm(state_ast_t0(1:3))/sc, 'go' )
 plot( tp/86400, d_int/sc, 'm' )
 
@@ -243,6 +247,13 @@ plot( 0/86400, norm(state_ast_0(1:3)-state_eat_0(1:3))/sc, 'k+')
 %% Compare orbit elements
 plot_oe_evolution( 'oe', tint, kep_4bp_t, 15, 'm', tint([1 end])/86400, 86400 )
 
+tp = [0 dt_per/86400];
+kep_ast_sma    = kep_ast; 
+kep_ast_sma(1) = kep_ast_sma(1)/(1-kep_ast_sma(2))
+
+kep_ast_plot = [kep_ast_sma kep_ast_sma]';
+
+plot_oe_evolution( 'oe', tp, kep_ast_plot, 15, 'b--', tint([1 end])/86400, 1)
 
 
 %% Do HillRot and HillRotInv go completely back and forth?
