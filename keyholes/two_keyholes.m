@@ -30,7 +30,7 @@ for i = 1:nkh
     zeta = zeta_down(i);
     
     % Check if xi1 <= b_Earth
-    [~,~,~,xi1,~] = opik_next(U,theta,phi,xi,zeta,t0,h);
+    [~,~,~,xi1,~] = opik_next(U,theta,phi,xi,zeta,t0,h,m);
     if (abs(xi1) > bEarth_au)
         zeta_edges(i,:) = NaN;
         xi_edges(i,:)   = NaN;
@@ -45,7 +45,7 @@ for i = 1:nkh
     
     % Find the value of zeta leading to a direct impact
     try
-        [zeta0,~] = fzero(@(zeta) opik_next(U,theta,phi,xi,zeta,t0,h),[zetapp1,zetapp2]);
+        [zeta0,~] = fzero(@(zeta) opik_next(U,theta,phi,xi,zeta,t0,h,m),[zetapp1,zetapp2]);
     catch
         %disp(['fzero error at i =',i]);
         zeta_edges(i,:) = NaN;
@@ -56,7 +56,7 @@ for i = 1:nkh
     % Compute keyhole edges
     zeta2_edges = [sqrt(bEarth_au^2 - xi2^2), -sqrt(bEarth_au^2 - xi2^2)];
     
-    [~,theta1,phi1,xi1,zeta1] = opik_next(U,theta,phi,xi,zeta0,t0,h);
+    [~,theta1,phi1,xi1,zeta1] = opik_next(U,theta,phi,xi,zeta0,t0,h,m);
     dz2dz = dzeta2dzeta(U,theta,phi,xi,zeta0,m,h,theta1,phi1,xi1,zeta1);
     zeta_edges(i,:) = zeta0 + zeta2_edges/dz2dz;
     xi_edges(i,:) = [xi,xi];
@@ -74,7 +74,7 @@ for i = 1:nkh
     zeta = zeta_up(i);
     
     % Check if xi1 <= b_Earth
-    [~,~,~,xi1,~] = opik_next(U,theta,phi,xi,zeta,t0,h);
+    [~,~,~,xi1,~] = opik_next(U,theta,phi,xi,zeta,t0,h,m);
     if (abs(xi1) > bEarth_au)
         zeta_edges(i,:) = NaN;
         xi_edges(i,:)   = NaN;
@@ -89,7 +89,7 @@ for i = 1:nkh
     
     % Find the value of zeta leading to a direct impact
     try
-        [zeta0,~] = fzero(@(zeta) opik_next(U,theta,phi,xi,zeta,t0,h),[zetapp1,zetapp2]);
+        [zeta0,~] = fzero(@(zeta) opik_next(U,theta,phi,xi,zeta,t0,h,m),[zetapp1,zetapp2]);
     catch
         %disp(['fzero error at i =',i]);
         zeta_edges(i,:) = NaN;
@@ -100,7 +100,7 @@ for i = 1:nkh
     % Compute keyhole edges
     zeta2_edges = [sqrt(bEarth_au^2 - xi2^2), -sqrt(bEarth_au^2 - xi2^2)];
     
-    [~,theta1,phi1,xi1,zeta1] = opik_next(U,theta,phi,xi,zeta0,t0,h);
+    [~,theta1,phi1,xi1,zeta1] = opik_next(U,theta,phi,xi,zeta0,t0,h,m);
     dz2dz = dzeta2dzeta(U,theta,phi,xi,zeta0,m,h,theta1,phi1,xi1,zeta1);
     zeta_edges(i,:) = zeta0 + zeta2_edges/dz2dz;
     xi_edges(i,:) = [xi,xi];

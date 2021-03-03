@@ -1,4 +1,4 @@
-function [zeta2,theta1,phi1,xi1,zeta1] = opik_next(U,theta,phi,xi,zeta,t0,h,m)
+function [zeta2,theta1,phi1,xi1,zeta1,b1_XYZ,U1_XYZ] = opik_next(U,theta,phi,xi,zeta,t0,h,m)
 % Propagates Öpik state vector from one encounter to the one taking place
 % "h" asteroid periods afterwards.
 
@@ -62,6 +62,8 @@ term1 = mod(2*pi*h*(a1)^1.5 + pi, 2*pi);
 term2 = (term1 - pi)*sin(theta1);
 zeta2 = zeta1 - term2;
 
+%% Additional Outputs
+b1_XYZ = ax_angle(b_XYZ,gamma,hn_XYZ);
 
 end
 
