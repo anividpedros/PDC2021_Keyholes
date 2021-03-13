@@ -24,3 +24,8 @@ B.Omega = deg2rad(-35);
 B.i = deg2rad(10);
 
 [moid] = ComputeMOID(A,B)
+
+%% Comparing to the other script
+OEA = [A.sma A.e A.Omega A.i A.argp];
+OEB = [B.sma B.e B.Omega B.i B.argp];
+MOID0 = MOID_SDG_win( OEA, OEB )
