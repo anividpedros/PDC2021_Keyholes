@@ -29,7 +29,7 @@ id = "PDCasteroid"
 ps = sim.particles
 
 Torb = 2.*np.pi # = 1 year
-Noutputs = 100
+Noutputs = 1000
 times = np.linspace(0, 1000.*Torb, Noutputs)
 
 sim.integrator = "ias15" # IAS15 is the default
