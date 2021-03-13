@@ -23,6 +23,7 @@ sim.add("Neptune", date=eph)
 # sim.add(id, m=0, date="JD2459184.5.0")
 sim.add(m=0, a=1.,e=0.,inc=0.,Omega=0,omega=0,f=1.7501549, date=eph)
 part = 9
+earth = 3
 id = "PDCasteroid"
 #----------------------------------------------------
 ps = sim.particles
@@ -34,8 +35,8 @@ times = np.linspace(0, 1000.*Torb, Noutputs)
 sim.integrator = "ias15" # IAS15 is the default
 sim.move_to_com()    
 
-x = np.zeros(Noutputs)
-y = np.zeros(Noutputs)
+
+d = np.zeros(Noutputs)
 av= np.zeros(Noutputs)
 ev= np.zeros(Noutputs)
 iv= np.zeros(Noutputs)
@@ -46,8 +47,15 @@ Mv= np.zeros(Noutputs)
 start = timeit.default_timer()
 for i,time in enumerate(times):
     sim.integrate(time)
-    x[i] = ps[part].x
-    y[i] = ps[part].y
+    xa = ps[part].x
+    ya = ps[part].y
+    za = ps[part].z
+    xt = ps[earth].x
+    yt = ps[earth].y
+    zt = ps[earth].z
+
+    # distance computation
+    d [i] = np.sqrt((xa-xt)**2 + (ya-yt)**2 + (za-zt)**2)
     av[i] = ps[part].a
     ev[i] = ps[part].e
     iv[i] = ps[part].inc
@@ -64,6 +72,7 @@ tplot = times/2/np.pi
 with open("PropagationFiles/"+id,'w') as f:
     f = csv.writer(f, delimiter=',')
     f.writerow(tplot)
+    f.writerow(d)
     f.writerow(av)
     f.writerow(ev)
     f.writerow(iv)
