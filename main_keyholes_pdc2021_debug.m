@@ -60,7 +60,7 @@ kep_eat = cspice_oscelt( state_eat, et, cons.GMs );
 
 state_ast = cspice_spkezr( ast_id, et, 'ECLIPJ2000', 'NONE', '10' );
 kep_ast = cspice_oscelt( state_ast, et, cons.GMs );
-
+sma_ast = kep_ast(1)/(1-kep_ast(2));
 
 %% 2. Modify elements for encounter with simpler Earth model
 % Make Earth Circular-Ecliptic -----
@@ -122,13 +122,14 @@ zeta_p = r_ast_O(1)*ct*sp - r_ast_O(2)*st + r_ast_O(3)*ct*cp;
 %% 5. MTP to TP
 % As in code by Amato, not sure of the reference
 
-% Asymptotic velocity
+% Asymptotic velocity: Energy conservation
 GME = cons.GMe;
 U = sqrt( V*V - 2*GME/b_p );
-% Rescaling b-plane coordinates
+% Rescaling b-plane coordinates: Angular momentum conservation
 b    = (V/U)*b_p  ;
 xi   = (V/U)*xi_p ;
 zeta = (V/U)*zeta_p ;
+
 % Rotation of velocity vector
 hgamma = atan( cons.GMe/(b*U*U) );
 hv     = cross( r_ast_O, v_ast_O );
@@ -147,7 +148,14 @@ m = cons.GMe/cons.GMs;
 % t0   = et + dt_per ;
 h    = 0;   % Number of revolutions until next encounter: only used for zeta2
 
-[~,theta1,phi1,xi1,zeta1] = opik_next(U_nd,theta,phi,xi/DU,zeta/DU,t0,h,m);
+[~,theta1,phi1,xi1,zeta1,r_b_post,v_b_post] = opik_next(U_nd,theta,phi,xi/DU,zeta/DU,t0,h,m);
+
+state_b_post = [r_b_post*DU; v_b_post*(DU/TU)];
+
+state_eat_per  = cspice_conics(kep_eat, t0 + dt_per);
+state_ast_post = HillRotInv( state_eat_per, state_b_post );
+
+kep_ast_post2 = cspice_oscelt( state_ast_post, t0 + dt_per, cons.GMs )
 
 
 %% 7. New heliocentric elements
@@ -158,7 +166,6 @@ longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense shoul
 kep_post_sma = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U_nd,phi,longp,ap );
 kep_ast_post = kep_post_sma';
 kep_ast_post(1) = kep_ast_post(1)*(1-kep_ast_post(2))*DU 
-
 
 
 %% ========= Plotting for verification =========
@@ -243,9 +250,9 @@ state_ast_0 = cspice_conics(kep_ast, et + dt);
 state_eat_0 = cspice_conics(kep_eat, et + dt);
 plot( 0/86400, norm(state_ast_0(1:3)-state_eat_0(1:3))/sc, 'k+')
 
+plot_oe_evolution( 'oe', tint, kep_4bp_t, 15, 'm', tint([1 end])/86400, 86400 )
 
 %% Compare orbit elements
-plot_oe_evolution( 'oe', tint, kep_4bp_t, 15, 'm', tint([1 end])/86400, 86400 )
 
 tp = [0 dt_per/86400];
 kep_ast_sma    = kep_ast; 
@@ -281,14 +288,157 @@ kep_ast_2 = cspice_oscelt( state_ast_2, et, cons.GMs );
 kep_ast;
 
 
-%% Check initial heliocentric elements
+%% Check Opik convsersion back and forth w/t encounter
+% Different things: 
+% - Directly get Earth ephemeris at perigee time
+%
+%------------------------------------
+
+kep_ast
+
+state_ast = cspice_conics(kep_ast, t0 + dt_per);
+state_eat = cspice_conics(kep_eat, t0 + dt_per);
+DU = norm( state_eat(1:3) );
+TU = sqrt(DU^3/cons.GMs);
+
+ap    = kep_eat(1)/(1-kep_eat(2))/DU ;
+longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense should be longitude
+
+%---------------
+% state_ast_O = HillRot(state_eat, state_ast);
+% kep_ast_O   = cspice_oscelt( state_ast_O, et, cons.GMe );
+% 
+% a_ast_O = kep_ast_O(1)/(1 - kep_ast_O(2));
+% n_ast_O = sqrt( -cons.GMe/a_ast_O(1)^3 );
+% dt_per  = (MA_per - kep_ast_O(6))/n_ast_O;
+% 
+% state_ast_per = cspice_conics( kep_ast_O, t0 + dt_per );
+% r_ast_O = state_ast_per(1:3);
+% v_ast_O = state_ast_per(4:6);
+%---------------
+state_ast_per = HillRot(state_eat, state_ast);
+r_ast_O = state_ast_per(1:3);
+v_ast_O = state_ast_per(4:6);
+%---------------
+
+% Coordinates at MTP - Perigee
+b_p   = norm( r_ast_O );
+V     = norm( v_ast_O );
+theta_p = acos( v_ast_O(2)/V );
+phi_p   = atan2( v_ast_O(1), v_ast_O(3) );
+ 
+cp = cos(phi_p);   sp = sin(phi_p);
+ct = cos(theta_p); st = sin(theta_p);
+auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp];
+
+xi_p   = r_ast_O(1)*cp - r_ast_O(3)*sp;
+eta_p  = r_ast_O(1)*st*sp + r_ast_O(2)*ct + r_ast_O(3)*st*cp;
+zeta_p = r_ast_O(1)*ct*sp - r_ast_O(2)*st + r_ast_O(3)*ct*cp; 
+
+% Asymptotic velocity: Energy conservation
+GME = cons.GMe;
+U = sqrt( V*V - 2*GME/b_p );
+
+U_nd = U/(DU/TU);
+m = cons.GMe/cons.GMs;
+
+% Rescaling b-plane coordinates: Angular momentum conservation
+b    = (V/U)*b_p  ;
+xi   = (V/U)*xi_p ;
+zeta = (V/U)*zeta_p ;
+ 
+% Rotation of velocity vector
+hgamma = atan( cons.GMe/(b*U*U) );
+hv     = cross( r_ast_O, v_ast_O );
+DCM    = PRV_2_DCM( -hgamma, hv/norm(hv) );
+UVec   = (U/V)*DCM*v_ast_O;
+theta  = acos(UVec(2)/U);
+phi    = atan2(UVec(1),UVec(3));
+
+% cp = cos(phi);   sp = sin(phi);
+% ct = cos(theta); st = sin(theta);
+% auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp];
+% 
+% % Get position at earlier date, then propagate
+% % rectilinearly until B-plane by U direction
+% ts = t0 + dt_per ;% 12*3600;%86400;
+% state_ast = cspice_conics(kep_ast, ts);
+% state_eat = cspice_conics(kep_eat, ts);
+% 
+% state_ast_O = HillRot(state_eat, state_ast);
+% Xs = state_ast_O(1);
+% Ys = state_ast_O(2);
+% Zs = state_ast_O(3);
+% 
+% % Could try rS by formulae
+% 
+% tb = ts - (( Xs*sp + Zs*cp )*st + Ys*ct)/U ;
+% 
+% Xb = UVec(1)*(tb-ts) + Xs;
+% Yb = UVec(2)*(tb-ts) + Ys;
+% Zb = UVec(3)*(tb-ts) + Zs;
+% 
+% r_b = auxR*[Xb;Yb;Zb];
+% 
+% b2 = norm(r_b);
+
+% xi = r_b(1)*b/b2;
+% zeta = r_b(3)*b/b2;
+
+% Re-translate to a point of the actual trajectory - MTP
 
 
+kep_opik = opik_bplane_2_oe( theta,phi,zeta/DU,xi/DU,U_nd,phi,longp,ap )';
+kep_opik(1) = kep_opik(1)*(1-kep_opik(2))*DU 
+
+kep_opik_p = opik_bplane_2_oe( theta_p,phi_p,zeta_p/DU,xi_p/DU,U_nd,phi_p,longp,ap )';
+kep_opik_p(1) = kep_opik_p(1)*(1-kep_opik_p(2))*DU ;
 
 
+%% Now solving the encounter
+h = 0;   % Number of revolutions until next encounter: only used for zeta2
 
+[~,theta1,phi1,xi1,zeta1,r_b_post,v_b_post] = opik_next(U_nd,theta,phi,xi/DU,zeta/DU,t0,h,m);
 
+xi1_dim = xi1*DU
+zeta1_dim = zeta1*DU
 
+theta1
+phi1
+
+%=========== Manual out of function encounter solver
+% DCM    = PRV_2_DCM( hgamma, hv/norm(hv) );
+% UVec_post   = (U/V)*DCM*v_ast_O;
+% 
+% theta1  = acos(UVec_post(2)/U);
+% phi1    = atan2(UVec_post(1),UVec_post(3));
+% 
+% BVec = [xi;0;zeta];
+% cp = cos(phi);   sp = sin(phi);
+% ct = cos(theta); st = sin(theta);
+% auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp];
+% BVec_O = auxR*BVec;
+% 
+% DCM    = PRV_2_DCM( 2*hgamma, hv/norm(hv) );
+% BVec_O_1 = DCM*BVec_O ;
+% 
+% cp = cos(phi1);   sp = sin(phi1);
+% ct = cos(theta1); st = sin(theta1);
+% auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp];
+% BVec_1 = auxR'*BVec_O_1
+% 
+% % xi1 = BVec_1(1)/DU;
+% % zeta1 = BVec_1(3)/DU;
+%%=============
+
+kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U_nd,phi,longp,ap )';
+kep_opik_post(1) = kep_opik_post(1)*DU
+% kep_opik_post(1) = kep_opik_post(1)*(1-kep_opik_post(2))*DU 
+
+tp = [dt_per/86400 8];
+kep_ast_plot = [kep_opik_post kep_opik_post]';
+
+plot_oe_evolution( 'oe', tp, kep_ast_plot, 15, 'g--', tint([1 end])/86400, 1)
 
 
 

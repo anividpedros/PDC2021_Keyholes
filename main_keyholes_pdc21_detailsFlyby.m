@@ -405,7 +405,7 @@ colormap(co);
 fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
 plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
 plot(cos(thv), sin(thv),'k--');
-plot(3*cos(thv), 3*sin(thv),'k--');
+% plot(3*cos(thv), 3*sin(thv),'k--');
 
 grid on
 axis equal
@@ -510,7 +510,7 @@ sma_post = kepE_sma(1)/( 1 - U_nd*U_nd - 2*U_nd*ct )
 cons.OEp = kepJ';
 cons.GMp = cspice_bodvrd( '5', 'GM', 1 );
 secular_model_LL = secular_model_10BP_s2(kep0_sma, cons, 1);
-tv = (0.1:.01:50) *cons.yr;
+tv = (0.05:.01:50) *cons.yr;
 for i = 1:length(tv)
     
     [~,kep0_LL_t(i,:)] = drifted_oe_s2( secular_model_LL, tv(i), kep0_sma, kepJ' );
@@ -553,7 +553,7 @@ F = figure(5);
 clf
 
 xsc = cons.yr;
-ysc = DU;%cons.Re;
+ysc = cons.Re;
 
 plot(tv([1 end])/xsc, MOID0*[1 1]/ysc, '--')
 hold on
