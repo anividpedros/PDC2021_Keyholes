@@ -1,4 +1,4 @@
-function [moid] = ComputeMoid(A,B)
+function [moid] = ComputeMOID(A,B)
     %% New orbital elements: A frame
     % incliA = 0, omegaA = 0, argpA = 0
     [incliB, omegaB, argpB] = RefFrame (A,B);
