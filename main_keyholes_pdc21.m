@@ -448,7 +448,10 @@ kepE = cspice_oscelt( state_eat, et_SOI+dt_per, cons.GMs );
 kepE_sma = kepE';
 kepE_sma(1) = kepE(1)/(1-kepE(2));
 
+
 MOID0 = MOID_SDG_win( kep0_sma([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
+
+
 
 state_jup = cspice_spkezr( '5',  et_SOI+dt_per, 'ECLIPJ2000', 'NONE', '10' );
 kepJ = cspice_oscelt( state_jup, et_SOI+dt_per, cons.GMs );
