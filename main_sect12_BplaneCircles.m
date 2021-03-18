@@ -99,6 +99,7 @@ state_ast = cspice_conics(kep_ast, t0 + dt_per);
 state_eat = cspice_conics(kep_eat, t0 + dt_per);
 DU = norm( state_eat(1:3) );
 TU = sqrt(DU^3/cons.GMs);
+cons.AU = DU;
 
 ap    = kep_eat(1)/(1-kep_eat(2))/DU ;
 longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense should be longitude
@@ -143,12 +144,17 @@ UVec   = (U/V)*DCM*v_ast_O;
 theta  = acos(UVec(2)/U);
 phi    = atan2(UVec(1),UVec(3));
 
+cp = cos(phi);   sp = sin(phi);
+ct = cos(theta); st = sin(theta);
+auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp];
+
 
 %% Compute Circles
 
-xi_nd   = xi/DU;
-zeta_nd = zeta/DU;
-b_nd = sqrt(xi_nd^2 + zeta_nd^2);
+% xi_nd   = xi/DU;
+% zeta_nd = zeta/DU;
+% b_nd = sqrt(xi_nd^2 + zeta_nd^2);
+b_nd = b/DU;
 c_nd = (cons.GMe/cons.GMs)/U_nd^2;
 
 b2 = b_nd*b_nd;
@@ -172,7 +178,7 @@ for k=1:kmax
         a0p(i) = (k/h)^(2/3);
         if sum( find(a0p(i) == a0p(1:i-1)) ); continue; end
         
-        ct0p = ( 1-U2-1/a0p(i) )/2/U_nd ;
+        ct0p = ( 1-U2-ap/a0p(i) )/2/U_nd ;
         if abs(ct0p) > 1; continue; end
         st0p = sqrt(1 - ct0p^2);
         
@@ -282,14 +288,13 @@ colormap(co);
 fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
 plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
 plot(cos(thv), sin(thv),'k--');
-plot(3*cos(thv), 3*sin(thv),'k--');
 
 grid on
 axis equal
 caxis([1 20])
 cb = colorbar;
 cb.Label.String = 'k';
-axis([-1 1 -1 1]*30)
+axis([-1 1 -1 1]*10)
 xlabel('\xi (R_\oplus)');
 ylabel('\zeta (R_\oplus)');
 
@@ -308,6 +313,7 @@ ic = kh_good(id(3));
 ic = kh_good(49);
 % Final decision
 ic = 124;
+% ic = 32; % kh_good(7);
 
 k = circles(ic,1);
 h = circles(ic,2);
@@ -328,27 +334,51 @@ plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
     'Color',cc);
 
 % 1. Find a point close to xi=0 (arbitrary choice)
-% [~,ik] = min( abs(kh_up_xi) );
+[~,ik] = min( abs(kh_up_xi) );
+xi0   = kh_up_xi(ik(1));
+zeta0 = kh_up_zeta(ik(1));
 
 % 2. Find the first point of the keyhole arc (arbirary as well)
 %--- Select depending on the arch being up or down
-
 % ik = find( ~isnan(kh_up_xi), 1 ); 
 % xi0   = kh_up_xi(ik);
 % zeta0 = kh_up_zeta(ik);
 
-ik = find( ~isnan(kh_down_xi), 1 ); 
-xi0   = kh_down_xi(ik);
-zeta0 = kh_down_zeta(ik);
+% ik = find( ~isnan(kh_down_xi), 1 ); 
+% xi0   = kh_down_xi(ik);
+% zeta0 = kh_down_zeta(ik);
 
 auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp];
 r0   = auxR'*[xi0; 0; zeta0];
+
+plot(xi0/sc, zeta0/sc,'rd','MarkerSize',8)
 
 %% 6. Solving the encounter with Opik formulae
 h = 0; % Number of revolutions until next encounter: only used for zeta2
 
 % Using keyhole point selected: xi0, zeta0
-[~,theta1,phi1,xi1,zeta1,r_b_post,v_b_post] = opik_next(U_nd,theta,phi,xi0/DU,zeta0/DU,t0,h,m);
+[~,theta1,phi1,xi1,zeta1,r_b_post,v_b_post] = opik_next(U_nd,theta,phi,xi0,zeta0,t0,h,m);
+
+
+% %% 6.1. TP to MTP
+% % Rescaling b-plane coordinates: Angular momentum conservation
+% xi1_p   = (U/V)*xi1 ;
+% zeta1_p = (U/V)*zeta1 ;
+% 
+% 
+% b    = (V/U)*b_p  ;
+% xi   = (V/U)*xi_p ;
+% zeta = (V/U)*zeta_p ;
+%  
+% % Rotation of velocity vector
+% hv     = cross( r_ast_O, v_ast_O );
+% hv     = cross( r_b_post, v_b_post );
+% 
+% DCM    = PRV_2_DCM( -hgamma, hv/norm(hv) );
+% UVec   = (U/V)*DCM*v_ast_O;
+% theta  = acos(UVec(2)/U);
+% phi    = atan2(UVec(1),UVec(3));
+
 
 
 %% 7. Heliocentric orbit elements from post-encounter coordinates (Opik formulae)
@@ -364,17 +394,19 @@ kep_opik_post(7:8) = [t0 + dt_per;
                         cons.GMs];
 % Include GM of the central body and epoch
 
+% kep_opik_post(1) = a_post_theory*(1-kep_opik_post(2));
+
 
 %% 8. Plotting: distance over time with heliocentric elements
 % Compute distance to Earth
-tv = (0.:.05:50) *cons.yr;
+tv = (0.:.001:20) *cons.yr;
 et0 = t0 + dt_per;
 
 clear d
 for i=1:length(tv)
     xa   = cspice_conics(kep_opik_post, et0 + tv(i) );
     xe   = cspice_conics(kep_eat,       et0 + tv(i) );
-    d(i) = norm(xe(1:3) - xa(1:3)); % From 4bp integration
+    d(i) = norm(xe(1:3) - xa(1:3)); 
 end
 
 % Is the next encounter happening?
@@ -384,6 +416,21 @@ xsc = cons.yr;
 ysc = DU; %cons.Re;
 
 plot(tv/xsc, d/ysc)
+grid on
+xlabel('t (yr)')
+ylabel('d (au)')
+
+%% 9. Validation of conversions
+% - Does the relationship of the sma's hold?
+% - Does the initial position hold? d(0)=b?
+
+k = circles(ic,1);
+h = circles(ic,2);
+
+a_post_theory = DU*(k/h)^(2/3)
+a_post_opik   = kep_opik_post(1)/(1-kep_opik_post(2))
+
+
 
 %% ===== PLOTTING AUX: Trying to create B-plane plot ========
 %------- Plot coordinates given by hyperbolic elements
