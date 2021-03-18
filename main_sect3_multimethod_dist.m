@@ -31,21 +31,18 @@ addpath(genpath(pwd))
 % - !!! If Earth not circular, review definition of Hill Frame
 
 %% 1. Read heliocentric elements
-mice_local_path = 'C:\Users\Oscar\odrive\Google Drive (2)\MSc-ASEN\Research\Code2020\EncountersCode\mice';
-% mice_local_de431 = '2nd Author write here your directory';
-
 dir_local_de431 = 'C:\Users\Oscar\Documents\Spice-Kernels\';
-% dir_local_de431 = '2nd Author write here your directory';
+% dir_local_de431 = '/Users/anivid/ExampleMICE/kernels/spk/';
 
-addpath(genpath(mice_local_path))
-cspice_furnsh( 'naif0012.tls.pc' )
-cspice_furnsh( 'gm_de431.tpc' )
-cspice_furnsh( 'pck00010.tpc' )
+% addpath(genpath(mice_local_path))
+cspice_furnsh( 'SPICEfiles/naif0012.tls.pc' )
+cspice_furnsh( 'SPICEfiles/gm_de431.tpc' )
+cspice_furnsh( 'SPICEfiles/pck00010.tpc' )
 cspice_furnsh( [dir_local_de431 'de431_part-1.bsp'] )
 cspice_furnsh( [dir_local_de431 'de431_part-2.bsp'] )
 
 % 2021 PDC
-cspice_furnsh( '2021_PDC-s11-merged-DE431.bsp' )
+cspice_furnsh( 'SPICEfiles/2021_PDC-s11-merged-DE431.bsp' )
 ast_id= '-937014';
 epoch = '2021 October 20 TDB';
 
@@ -53,7 +50,7 @@ et = cspice_str2et( epoch ) + 24*.715*3600;
 
 cons.AU  = cspice_convrt(1, 'AU', 'KM');
 cons.GMs = cspice_bodvrd( 'SUN', 'GM', 10 );
-% cons.GMe = cspice_bodvrd( '3', 'GM', 1 );
+% cons.GMe = cspice_bodvrd( '399', 'GM', 1 );
 cons.GMe = 398600.43543609593;
 cons.Re  = 6378.140;
 
@@ -68,16 +65,18 @@ kep_ast = cspice_oscelt( state_ast, et, cons.GMs );
 sma_ast = kep_ast(1)/(1-kep_ast(2));
 
 %% 2. Modify elements for encounter with simpler Earth model
-% Make Earth Circular-Ecliptic -----
-kep_eat(2:3) = 0;
-
-% Modify NEO to try to make dCA smaller ----
-kep_ast(3) = kep_ast(3)+.2;     % Increase inclination
-kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
-kep_ast(6) = kep_ast(6)-0.0111; % Adjust timing for very close flyby
+% % Make Earth Circular-Ecliptic -----
+% kep_eat(2:3) = 0;
+% cons.yr = 2*pi/sqrt(cons.GMs/kep_eat(1)^3);
+% 
+% % Modify NEO to try to make dCA smaller ----
+% kep_ast(3) = kep_ast(3)+.2;     % Increase inclination
+% kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
+kep_ast(6) = kep_ast(6)-0.002; % Adjust timing for very close flyby
 
 % Generate states moments before the flyby
-dt = -4*24 * 3600;
+% dt = -4*24 * 3600;
+dt = 24*.715*3600;
 t0 = et + dt;
 
 state_ast = cspice_conics(kep_ast, t0);
@@ -104,6 +103,7 @@ state_ast = cspice_conics(kep_ast, t0 + dt_per);
 state_eat = cspice_conics(kep_eat, t0 + dt_per);
 DU = norm( state_eat(1:3) );
 TU = sqrt(DU^3/cons.GMs);
+cons.AU = DU;
 
 ap    = kep_eat(1)/(1-kep_eat(2))/DU ;
 longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense should be longitude
@@ -148,26 +148,288 @@ UVec   = (U/V)*DCM*v_ast_O;
 theta  = acos(UVec(2)/U);
 phi    = atan2(UVec(1),UVec(3));
 
+cp = cos(phi);   sp = sin(phi);
+ct = cos(theta); st = sin(theta);
+auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp];
+
+
+%% Compute Circles
+
+% xi_nd   = xi/DU;
+% zeta_nd = zeta/DU;
+% b_nd = sqrt(xi_nd^2 + zeta_nd^2);
+b_nd = b/DU;
+c_nd = (cons.GMe/cons.GMs)/U_nd^2;
+
+b2 = b_nd*b_nd;
+c2 = c_nd*c_nd;
+U2 = U_nd*U_nd;
+% aux1 = (b2+c2)*(1-U2);
+% aux2 = -2*U_nd*( (b2-c2)*ct + 2*c_nd*zeta_nd*st );
+
+a_pre  = 1/(1-U2-2*U_nd*ct);
+% a_post = (b2 + c2)/(aux1 + aux2);
+
+kmax = 20;
+hmax = 50;
+
+i = 0;
+circ = [];
+for k=1:kmax
+    for h=1:hmax
+        
+        i = i+1 ;
+        a0p(i) = (k/h)^(2/3);
+        if sum( find(a0p(i) == a0p(1:i-1)) ); continue; end
+        
+        ct0p = ( 1-U2-ap/a0p(i) )/2/U_nd ;
+        if abs(ct0p) > 1; continue; end
+        st0p = sqrt(1 - ct0p^2);
+        
+        % Cirle center location and radius
+        D = (c_nd*st)/(ct0p - ct);
+        R = abs( c_nd*st0p/(ct0p - ct) );
+        
+%         % Skip if doesn't intersect the (0,Rstar) circle
+        % Does not make sense becaues we don't design maneuvers
+        % However, if we don't include a filter, the keyhole search
+        % explodes for the very small circles
+%         Rstar = 1*cons.Re/DU;
+%         if ( (abs(D)<abs(R-Rstar)) || (abs(D)>(R+Rstar)) ); continue; end
+        
+        circ = [circ; 
+            k h D*DU R*DU];
+        
+    end
+end
+
+% Plot Valsecchi circles!
+F  = figure(2);
+
+nr = size(circ,1);
+co = winter(22);
+thv= 0:(2*pi/99):2*pi ;
+sc = cons.Re;
+
+focus_factor = sqrt(1 + 2*cons.GMe/(cons.Re*U^2));
+RE_focussed  = focus_factor;
+
+for i=1:nr
+    
+    k = circ(i,1);
+    D = circ(i,3);    
+    R = circ(i,4);
+    
+    xi_circ   = R*cos(thv);
+    zeta_circ = D + R*sin(thv);
+    
+    cc = co(k,:);
+    plot( xi_circ/sc, zeta_circ/sc, 'Color', cc )
+    hold on
+    
+end
+colormap(co);
+fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
+plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
+plot(cos(thv), sin(thv),'k--');
+% plot(3*cos(thv), 3*sin(thv),'k--');
+
+grid on
+axis equal
+caxis([1 kmax])
+cb = colorbar;
+cb.Label.String = 'k';
+axis([-1 1 -1 1]*15)
+xlabel('\xi (R_\oplus)');
+ylabel('\zeta (R_\oplus)');
+
+plot( xi/sc, zeta/sc, '+k' )
+
+
+%% General Keyholes computation
+% Section dependencies: scripts in 'keyholes'
+RE_au = cons.Re/DU;
+
+m  = cons.GMe/cons.GMs ;
+circles = circ;
+
+F = figure(3);
+hold on
+
+sc = cons.Re/DU;
+nr = size(circles,1);
+kh_good = [];
+for i=1:nr
+    
+    % New circles
+    k = circles(i,1);
+    h = circles(i,2);
+    D = circles(i,3)/cons.Re;    
+    R = circles(i,4)/cons.Re;    
+    
+    [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+        two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
+    
+    cc = co(k,:);    
+    plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
+        'Color',cc);
+    plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
+         'Color',cc);
+     
+    % Register keyholes with solutions
+%     arcexist = sum(~isnan(kh_up_xi)) + sum(~isnan(kh_down_xi));
+    R1 = sqrt(sum(kh_down_xi.^2 + kh_down_zeta.^2,2));
+    R2 = sqrt(sum(kh_up_xi.^2 + kh_up_zeta.^2,2));
+    arcexist = sum( (R1-RE_au*focus_factor)>0 ) + sum( (R2-RE_au*focus_factor)>0 );
+    
+    arcexist = sum( kh_up_zeta > 2*RE_au*focus_factor );
+    
+    if arcexist
+        kh_good = [kh_good; i];
+        fprintf('Keyhole num %g exists\n',i)
+    end
+    
+    
+end
+colormap(co);
+fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
+plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
+plot(cos(thv), sin(thv),'k--');
+
+grid on
+axis equal
+caxis([1 20])
+cb = colorbar;
+cb.Label.String = 'k';
+axis([-1 1 -1 1]*10)
+xlabel('\xi (R_\oplus)');
+ylabel('\zeta (R_\oplus)');
+
+
+%% Keyhole selection
+% Pick flyby from the keyholes and generate ICs
+
+% Manually select k
+% kref = 15;
+% ic = find( circles(:,1) == kref, 1 ) + 3;
+ic = 65;
+
+k = circles(ic,1);
+h = circles(ic,2);
+D = circles(ic,3)/cons.Re;
+R = circles(ic,4)/cons.Re;
+
+[kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+    two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
+
+% Plot selected keyhole
+figure(2)
+cc = [1 0 0];
+sc = cons.Re/DU;
+
+plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
+    'Color',cc);
+plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
+    'Color',cc);
+
+% 1. Find a point close to xi=0 (arbitrary choice)
+[~,ik] = min( abs(kh_up_xi) );
+xi0   = kh_up_xi(ik(1));
+zeta0 = kh_up_zeta(ik(1));
+
+% 2. Find the first point of the keyhole arc (arbirary as well)
+%--- Select depending on the arch being up or down
+% ik = find( ~isnan(kh_up_xi), 1 ); 
+% xi0   = kh_up_xi(ik);
+% zeta0 = kh_up_zeta(ik);
+
+% ik = find( ~isnan(kh_down_xi), 1 ); 
+% xi0   = kh_down_xi(ik);
+% zeta0 = kh_down_zeta(ik);
+
+auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp];
+r0   = auxR'*[xi0; 0; zeta0];
+
+plot(xi0/sc, zeta0/sc,'rd','MarkerSize',8)
 
 %% 6. Solving the encounter with Opik formulae
-h = 0; % Number of revolutions until next encounter: only used for zeta2
+% h = 0; % Number of revolutions until next encounter: only used for zeta2
 
-[~,theta1,phi1,xi1,zeta1,r_b_post,v_b_post] = opik_next(U_nd,theta,phi,xi/DU,zeta/DU,t0,h,m);
+% Using keyhole point selected: xi0, zeta0
+[zeta2,theta1,phi1,xi1,zeta1,r_b_post,v_b_post] = opik_next(U_nd,theta,phi,xi0,zeta0,t0,h,m);
+
+
+% %% 6.1. TP to MTP
+% % Rescaling b-plane coordinates: Angular momentum conservation
+% xi1_p   = (U/V)*xi1 ;
+% zeta1_p = (U/V)*zeta1 ;
+% 
+% % Rotation of velocity vector
+% hv     = cross( r_ast_O, v_ast_O );
+% % hv     = cross( r_b_post, v_b_post );
+% 
+% DCM    = PRV_2_DCM( -hgamma, hv/norm(hv) );
+% VVec   = (V/U)*DCM*v_b_post;
+% theta1_p  = acos(VVec(2)/norm(VVec));
+% phi1_p    = atan2(VVec(1),VVec(3));
+% 
+% V_nd = V/(DU/TU);
+% 
+% kep_opik_post = opik_bplane_2_oe( theta1_p,phi1_p,zeta1_p,xi1_p,V_nd,phi1_p,longp,ap )'
 
 
 %% 7. Heliocentric orbit elements from post-encounter coordinates (Opik formulae)
 kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U_nd,phi,longp,ap )';
-kep_opik_post(1) = kep_opik_post(1)*DU ;
-% This function returns sma in first element
+
+kep_opik_post(1) = kep_opik_post(1)*(1-kep_opik_post(2))*DU ; 
+% 'opik_bplane_2_oe.m' function returns sma in first element
+
+kep_opik_post(6) = TA_2_MA(kep_opik_post(6),kep_opik_post(2));
+% 'opik_bplane_2_oe.m' function returns true anomaly 6th element
+
+kep_opik_post(7:8) = [t0 + dt_per;
+                        cons.GMs];
+% Include GM of the central body and epoch
+
+% kep_opik_post(1) = a_post_theory*(1-kep_opik_post(2));
 
 
-%% Reading data from REBOUND
+%% 8. Plotting: distance over time with heliocentric elements
+% Compute distance to Earth
+tv = (0.:.001:20) *cons.yr;
+et0 = t0 + dt_per;
+
+clear d
+for i=1:length(tv)
+    xa   = cspice_conics(kep_opik_post, et0 + tv(i) );
+    xe   = cspice_conics(kep_eat,       et0 + tv(i) );
+    d_pe(i) = norm(xe(1:3) - xa(1:3)); 
+end
+
+% Is the next encounter happening?
+F = figure(6);
+clf
+xsc = cons.yr;
+ysc = DU; %cons.Re;
+
+plot(tv/xsc, d_pe/ysc)
+grid on
+hold on
+xlabel('t (yr)')
+ylabel('d (au)')
+
+
+% Reading data from REBOUND
 dades = csvread(['PDCasteroid']);
-        t = dades(1,:);
-        d = dades(2,:);
+        t = dades(1,:) + 30*24*3600;
+        d_py = dades(2,:);
         
-F = figure(4);
-plot(t/2/pi,d)
+F = figure(6);
+xsc = cons.yr;
+ysc = cons.AU;
+
+hold on
+plot(t/xsc,d_py/ysc)
 xlabel('time (yr)')
 ylabel('d (au)')
 grid on
@@ -175,23 +437,36 @@ grid on
 
 % Compute MOID of integrated trajectory
 nt = size(dades,2);
-% IMPLEMENT TIME VARYING ELEMENTS OF EARTH
-for i=1:nt
-    kep_nbp = dades(3:8,i)';
-    moid_nbp_t(i) = MOID_SDG_win( kep_nbp([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
-end
-figure
-plot(t/2/pi,moid_nbp_t)
-grid on
-
-%% Secular propagation
-kep0 = kep_opik_post;
-kep0_sma = kep_opik_post';
-kep0_sma(1) = kep0(1)/(1-kep0(2));
-
+% IMPLEMENT TIME VARYING ELEMENTS OF EARTH for MOID
 kepE = kep_eat;
 kepE_sma = kepE';
 kepE_sma(1) = kepE(1)/(1-kepE(2));
+
+for i=1:nt
+    kep_nbp = [dades(3:8,i)' t(i)+et0 cons.GMs];
+    moid_nbp_t(i) = MOID_SDG_win( kep_nbp([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
+    
+    kep_nbp_peri = kep_nbp';
+    kep_nbp_peri(1) = kep_nbp_peri(1)*(1-kep_nbp_peri(2));
+    xa   = cspice_conics(kep_nbp_peri,  et0 + tv(i) );
+    xe   = cspice_conics(kep_eat,       et0 + tv(i) );
+    d_py2(i) = norm(xe(1:3) - xa(1:3)); 
+    
+end
+figure(5)
+
+plot(t/xsc, moid_nbp_t/ysc)
+hold on
+grid on
+
+figure(6)
+plot(t/xsc, d_py2/ysc)
+
+
+% Secular propagation
+kep0 = kep_opik_post;
+kep0_sma = kep_opik_post';
+kep0_sma(1) = kep0(1)/(1-kep0(2));
 
 MOID0 = MOID_SDG_win( kep0_sma([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
 
@@ -215,7 +490,7 @@ for i = 1:length(tv)
     
     xa   = cspice_conics(kep_LL_t, et0 + tv(i) );
     xe   = cspice_conics(kep_eat,  et0 + tv(i) );
-    d2(i) = norm(xe(1:3) - xa(1:3)); 
+    d_ll(i) = norm(xe(1:3) - xa(1:3)); 
     
     moid_LL_t(i) = MOID_SDG_win( kep0_LL_t(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
     
@@ -223,7 +498,6 @@ end
 
 % Plot moid time evolutions
 F = figure(5);
-clf
 
 xsc = cons.yr;
 ysc = DU; %cons.Re;
@@ -239,7 +513,7 @@ grid on
 xlabel('time (yr)')
 ylabel('MOID (DU)');%(R_\oplus)')
 
-legend('post-encounter','secLL')%,'4BP')
+legend('NBP','post-encounter','secLL')%,'4BP')
 
 %-------------------------
 % Is the next encounter happening?
@@ -247,10 +521,10 @@ F = figure(6);
 
 % plot(tv/xsc, d/ysc)
 hold on
-plot(tv/xsc, d2/ysc)
+plot(tv/xsc, d_ll/ysc)
 
 grid on
 xlabel('time (yr)')
 ylabel('d (R_\oplus)')
 
-legend('4BP','post-enc')
+legend('post-enc','NBP','NBP-conE','sec-LL')
