@@ -10,7 +10,7 @@ import re
 sim = rebound.Simulation()
 
 # Full Horizons data retrieval
-et = 690637020.237164 #epoch time
+et = 719149020.237186 #epoch time
 
 spice.furnsh('SPICEfiles/naif0012.tls.pc')
 spice.furnsh('SPICEfiles/gm_de431.tpc')
@@ -61,7 +61,7 @@ sim.add(m=GM_nep, x=state8[0],y=state8[1],z=state8[2],vx=state8[3],vy=state8[4],
      
           
 # Asteroid PDC 2021
-sim.add(m=0, a=333531592.021882,e=0.57830743096097,inc=0.313259712927621,Omega=3.64891542737495,omega=2.56612524483412,M=0.285750863457698)
+sim.add(m=0, a=333531592.021882,e=0.57830743096097,inc=0.313259712927621,Omega=3.64891542737495,omega=2.56612524483412,M=1.06084661066728)
 part = 9
 earth = 3
 id = "PDCasteroid"
