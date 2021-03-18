@@ -106,7 +106,7 @@ print ("Runtime: ", stop - start, " seconds")
 
 
 #-----------------------
-tplot = times/2/np.pi
+tplot = times
 
 with open("PropagationFiles/"+id,'w') as f:
     f = csv.writer(f, delimiter=',')
