@@ -27,16 +27,17 @@ addpath(genpath(pwd))
 
 %% 1. Read heliocentric elements
 dir_local_de431 = 'C:\Users\Oscar\Documents\Spice-Kernels\';
-% dir_local_de431 = '2nd Author write here your directory';
+% dir_local_de431 = '/Users/anivid/ExampleMICE/kernels/spk/';
 
-cspice_furnsh( 'naif0012.tls.pc' )
-cspice_furnsh( 'gm_de431.tpc' )
-cspice_furnsh( 'pck00010.tpc' )
+% addpath(genpath(mice_local_path))
+cspice_furnsh( 'SPICEfiles/naif0012.tls.pc' )
+cspice_furnsh( 'SPICEfiles/gm_de431.tpc' )
+cspice_furnsh( 'SPICEfiles/pck00010.tpc' )
 cspice_furnsh( [dir_local_de431 'de431_part-1.bsp'] )
 cspice_furnsh( [dir_local_de431 'de431_part-2.bsp'] )
 
 % 2021 PDC
-cspice_furnsh( '2021_PDC-s11-merged-DE431.bsp' )
+cspice_furnsh( 'SPICEfiles/2021_PDC-s11-merged-DE431.bsp' )
 ast_id= '-937014';
 epoch = '2021 October 20 TDB';
 
