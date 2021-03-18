@@ -5,7 +5,7 @@ clear
 close all
 format shortG
 
-filename = 'main_sect12_BplaneCircles.m';
+filename = 'main_sect12_BplaneCircles_circularEarth.m';
 filepath = matlab.desktop.editor.getActiveFilename;
 currPath = filepath(1:(end-length(filename)));
 cd(currPath)
@@ -59,18 +59,17 @@ kep_ast = cspice_oscelt( state_ast, et, cons.GMs );
 sma_ast = kep_ast(1)/(1-kep_ast(2));
 
 %% 2. Modify elements for encounter with simpler Earth model
-% % Make Earth Circular-Ecliptic -----
-% kep_eat(2:3) = 0;
-% cons.yr = 2*pi/sqrt(cons.GMs/kep_eat(1)^3);
-% 
-% % Modify NEO to try to make dCA smaller ----
-% kep_ast(3) = kep_ast(3)+.2;     % Increase inclination
-% kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
-kep_ast(6) = kep_ast(6)-0.002; % Adjust timing for very close flyby
+% Make Earth Circular-Ecliptic -----
+kep_eat(2:3) = 0;
+cons.yr = 2*pi/sqrt(cons.GMs/kep_eat(1)^3);
+
+% Modify NEO to try to make dCA smaller ----
+kep_ast(3) = kep_ast(3)+.2;     % Increase inclination
+kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
+kep_ast(6) = kep_ast(6)-0.0111; % Adjust timing for very close flyby
 
 % Generate states moments before the flyby
-% dt = -4*24 * 3600;
-dt = 24*.715*3600;
+dt = -4*24 * 3600;
 t0 = et + dt;
 
 state_ast = cspice_conics(kep_ast, t0);
@@ -275,9 +274,6 @@ for i=1:nr
     R1 = sqrt(sum(kh_down_xi.^2 + kh_down_zeta.^2,2));
     R2 = sqrt(sum(kh_up_xi.^2 + kh_up_zeta.^2,2));
     arcexist = sum( (R1-RE_au*focus_factor)>0 ) + sum( (R2-RE_au*focus_factor)>0 );
-    
-    arcexist = sum( kh_up_zeta > 2*RE_au*focus_factor );
-    
     if arcexist
         kh_good = [kh_good; i];
         fprintf('Keyhole num %g exists\n',i)
@@ -304,9 +300,17 @@ ylabel('\zeta (R_\oplus)');
 % Pick flyby from the keyholes and generate ICs
 
 % Manually select k
-% kref = 15;
-% ic = find( circles(:,1) == kref, 1 ) + 3;
-ic = 65;
+kref = 15;
+ic = find( circles(:,1) == kref, 1 ) + 3;
+% Max radius from keyholes found
+[~,id] = max(abs(circles(kh_good,:)));
+ic = kh_good(id(3));
+% Finding circles with large radius list
+[~,id] = sort(abs(circles(kh_good,3)),'descend');
+ic = kh_good(49);
+% Final decision
+ic = 124;
+ic = 32; % kh_good(7);
 
 k = circles(ic,1);
 h = circles(ic,2);

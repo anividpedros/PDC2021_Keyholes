@@ -172,3 +172,85 @@ xlabel('time (yr)')
 ylabel('d (au)')
 grid on
         
+
+% Compute MOID of integrated trajectory
+nt = size(dades,2);
+% IMPLEMENT TIME VARYING ELEMENTS OF EARTH
+for i=1:nt
+    kep_nbp = dades(3:8,i)';
+    moid_nbp_t(i) = MOID_SDG_win( kep_nbp([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
+end
+figure
+plot(t/2/pi,moid_nbp_t)
+grid on
+
+%% Secular propagation
+kep0 = kep_opik_post;
+kep0_sma = kep_opik_post';
+kep0_sma(1) = kep0(1)/(1-kep0(2));
+
+kepE = kep_eat;
+kepE_sma = kepE';
+kepE_sma(1) = kepE(1)/(1-kepE(2));
+
+MOID0 = MOID_SDG_win( kep0_sma([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
+
+state_jup = cspice_spkezr( '5',  et0, 'ECLIPJ2000', 'NONE', '10' );
+kepJ = cspice_oscelt( state_jup,   et0, cons.GMs );
+kepJ_sma = kepJ;
+kepJ_sma(1) = kepJ(1)/(1-kepJ(2));
+
+% Secular Model: Lagrange-Laplace
+cons.OEp = kepJ';
+cons.GMp = cspice_bodvrd( '599', 'GM', 1 );
+secular_model_LL = secular_model_10BP_s2(kep0_sma, cons, 1);
+tv = (0.:.001:20) *cons.yr;
+
+kep_LL_t = kep_opik_post;
+
+for i = 1:length(tv)
+    
+    [~,kep0_LL_t(i,:)] = drifted_oe_s2( secular_model_LL, tv(i), kep0_sma, kepJ' );
+    kep_LL_t(2:6) = kep0_LL_t(i,2:6); 
+    
+    xa   = cspice_conics(kep_LL_t, et0 + tv(i) );
+    xe   = cspice_conics(kep_eat,  et0 + tv(i) );
+    d2(i) = norm(xe(1:3) - xa(1:3)); 
+    
+    moid_LL_t(i) = MOID_SDG_win( kep0_LL_t(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
+    
+end
+
+% Plot moid time evolutions
+F = figure(5);
+clf
+
+xsc = cons.yr;
+ysc = DU; %cons.Re;
+
+plot(tv([1 end])/xsc, MOID0*[1 1]/ysc, '--')
+hold on
+plot(tv/xsc, moid_LL_t/ysc)
+% plot(tv/xsc, moid_4bp_t/ysc)
+% plot(tv/xsc, d/ysc)
+% plot(tv/xsc, d2/ysc)
+
+grid on
+xlabel('time (yr)')
+ylabel('MOID (DU)');%(R_\oplus)')
+
+legend('post-encounter','secLL')%,'4BP')
+
+%-------------------------
+% Is the next encounter happening?
+F = figure(6);
+
+% plot(tv/xsc, d/ysc)
+hold on
+plot(tv/xsc, d2/ysc)
+
+grid on
+xlabel('time (yr)')
+ylabel('d (R_\oplus)')
+
+legend('4BP','post-enc')
