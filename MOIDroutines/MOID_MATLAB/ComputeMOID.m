@@ -1,4 +1,4 @@
-function [moid] = ComputeMOID(A,B)
+function [moid, vA_out, vB_out] = ComputeMOID(A,B)
     %% New orbital elements: A frame
     % incliA = 0, omegaA = 0, argpA = 0
     [incliB, omegaB, argpB] = RefFrame (A,B);
@@ -18,7 +18,14 @@ function [moid] = ComputeMOID(A,B)
     moid = 1e6;
     dist_o = 1e6;
     vdis = ones(4,1)*1e6;
-
+    
+    % Pre-define variables to know type in code generation
+    L_m = 0;
+    trueB_m = 0;
+    dist_oo = 1e6;
+    trueB_o = 0;
+    L_o = 0;
+    
     for i = 1:2
         % First triplet
         rB = B.sma * (1-B.e.^2) / (1+B.e*cos(trueB)); %compute the radius for B
@@ -55,6 +62,9 @@ function [moid] = ComputeMOID(A,B)
     N = 0; % number of minima
     dmin = D;
 
+    vtrueB = zeros(100,1);
+    vL     = zeros(100,1);
+    
     while trueB < (2*pi + cstep)
         rB = B.sma * (1-B.e.^2) / (1+B.e*cos(trueB)); %compute the radius for B
         xB = rB * (cos(omegaB)*cos(argpB+trueB) - sin(omegaB)*sin(argpB+trueB)*cos(incliB));
@@ -293,6 +303,8 @@ function [moid] = ComputeMOID(A,B)
         k = k+1;
     end
     moid = sqrt(moid);
+    vA_out = -L_m;
+    vB_out = -trueB_m;
 end
 
 
