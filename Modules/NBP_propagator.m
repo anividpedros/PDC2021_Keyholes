@@ -8,10 +8,10 @@ function Xdot = NBP_propagator(t,X,Input)
     v = X(4:6);
     
     % SUN - 2BP
-    ag = -mu_vec(1)/norm(x)^3*x;
+    ag=-mu_vec(1)/norm(x)^3*x;
     
     % PLANETS - 3BP 
-    a3 = zeros(3,1);
+    a3=zeros(3,1);
     for i=2:length(mu_vec)
         
         kep_planet = Input.IC_planet(:,i-1);
@@ -21,7 +21,7 @@ function Xdot = NBP_propagator(t,X,Input)
         
     end
 
-    Xdot(1:3) = v;
-    Xdot(4:6) = ag+a3;
+    Xdot(1:3,1) = v;
+    Xdot(4:6,1) = ag+a3;
 
 end
