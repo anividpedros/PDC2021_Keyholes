@@ -5,16 +5,11 @@ clear
 close all
 format shortG
 
-filename = 'main_sect3_multimethod_dist.m';
+filename = 'main_sect12_BplaneCircles_circularEarth.m';
 filepath = matlab.desktop.editor.getActiveFilename;
 currPath = filepath(1:(end-length(filename)));
 cd(currPath)
 addpath(genpath(pwd))
-
-%% ===== Description ===== 
-% Original script: main_1flyby_pdc2021.m
-% Extension: Generate distance(t) plots given post-encounter coordinates
-%  =======================
 
 %% Script steps
 % 1. Read heliocentric elements (spice file) - date close to the encounter
@@ -32,17 +27,16 @@ addpath(genpath(pwd))
 
 %% 1. Read heliocentric elements
 dir_local_de431 = 'C:\Users\Oscar\Documents\Spice-Kernels\';
-% dir_local_de431 = '/Users/anivid/ExampleMICE/kernels/spk/';
+% dir_local_de431 = '2nd Author write here your directory';
 
-% addpath(genpath(mice_local_path))
-cspice_furnsh( 'SPICEfiles/naif0012.tls.pc' )
-cspice_furnsh( 'SPICEfiles/gm_de431.tpc' )
-cspice_furnsh( 'SPICEfiles/pck00010.tpc' )
+cspice_furnsh( 'naif0012.tls.pc' )
+cspice_furnsh( 'gm_de431.tpc' )
+cspice_furnsh( 'pck00010.tpc' )
 cspice_furnsh( [dir_local_de431 'de431_part-1.bsp'] )
 cspice_furnsh( [dir_local_de431 'de431_part-2.bsp'] )
 
 % 2021 PDC
-cspice_furnsh( 'SPICEfiles/2021_PDC-s11-merged-DE431.bsp' )
+cspice_furnsh( '2021_PDC-s11-merged-DE431.bsp' )
 ast_id= '-937014';
 epoch = '2021 October 20 TDB';
 
@@ -65,18 +59,17 @@ kep_ast = cspice_oscelt( state_ast, et, cons.GMs );
 sma_ast = kep_ast(1)/(1-kep_ast(2));
 
 %% 2. Modify elements for encounter with simpler Earth model
-% % Make Earth Circular-Ecliptic -----
-% kep_eat(2:3) = 0;
-% cons.yr = 2*pi/sqrt(cons.GMs/kep_eat(1)^3);
-% 
-% % Modify NEO to try to make dCA smaller ----
-% kep_ast(3) = kep_ast(3)+.2;     % Increase inclination
-% kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
-kep_ast(6) = kep_ast(6)-0.002; % Adjust timing for very close flyby
+% Make Earth Circular-Ecliptic -----
+kep_eat(2:3) = 0;
+cons.yr = 2*pi/sqrt(cons.GMs/kep_eat(1)^3);
+
+% Modify NEO to try to make dCA smaller ----
+kep_ast(3) = kep_ast(3)+.2;     % Increase inclination
+kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
+kep_ast(6) = kep_ast(6)-0.0111; % Adjust timing for very close flyby
 
 % Generate states moments before the flyby
-% dt = -4*24 * 3600;
-dt = 24*.715*3600;
+dt = -4*24 * 3600;
 t0 = et + dt;
 
 state_ast = cspice_conics(kep_ast, t0);
@@ -281,10 +274,6 @@ for i=1:nr
     R1 = sqrt(sum(kh_down_xi.^2 + kh_down_zeta.^2,2));
     R2 = sqrt(sum(kh_up_xi.^2 + kh_up_zeta.^2,2));
     arcexist = sum( (R1-RE_au*focus_factor)>0 ) + sum( (R2-RE_au*focus_factor)>0 );
-    
-    arcexist = sum( kh_up_zeta > 2*RE_au*focus_factor );
-    arcexist = sum( kh_down_zeta < -1.6*RE_au );
-    
     if arcexist
         kh_good = [kh_good; i];
         fprintf('Keyhole num %g exists\n',i)
@@ -311,10 +300,17 @@ ylabel('\zeta (R_\oplus)');
 % Pick flyby from the keyholes and generate ICs
 
 % Manually select k
-% kref = 15;
-% ic = find( circles(:,1) == kref, 1 ) + 3;
-ic = 65;
-ic = 1;
+kref = 15;
+ic = find( circles(:,1) == kref, 1 ) + 3;
+% Max radius from keyholes found
+[~,id] = max(abs(circles(kh_good,:)));
+ic = kh_good(id(3));
+% Finding circles with large radius list
+[~,id] = sort(abs(circles(kh_good,3)),'descend');
+ic = kh_good(49);
+% Final decision
+ic = 124;
+ic = 32; % kh_good(7);
 
 k = circles(ic,1);
 h = circles(ic,2);
@@ -325,7 +321,7 @@ R = circles(ic,4)/cons.Re;
     two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
 
 % Plot selected keyhole
-figure(3)
+figure(2)
 cc = [1 0 0];
 sc = cons.Re/DU;
 
@@ -338,10 +334,6 @@ plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
 [~,ik] = min( abs(kh_up_xi) );
 xi0   = kh_up_xi(ik(1));
 zeta0 = kh_up_zeta(ik(1));
-
-[~,ik] = min( abs(kh_down_xi) );
-xi0   = kh_down_xi(ik(1));
-zeta0 = kh_down_zeta(ik(1));
 
 % 2. Find the first point of the keyhole arc (arbirary as well)
 %--- Select depending on the arch being up or down
@@ -385,8 +377,6 @@ plot(xi0/sc, zeta0/sc,'rd','MarkerSize',8)
 
 
 %% 7. Heliocentric orbit elements from post-encounter coordinates (Opik formulae)
-longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense should be longitude
-longp = atan2( state_eat(2),state_eat(1) );
 kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U_nd,phi,longp,ap )';
 
 kep_opik_post(1) = kep_opik_post(1)*(1-kep_opik_post(2))*DU ; 
@@ -404,14 +394,14 @@ kep_opik_post(7:8) = [t0 + dt_per;
 
 %% 8. Plotting: distance over time with heliocentric elements
 % Compute distance to Earth
-tv = (-0.1:.001:20) *cons.yr;
+tv = (0.:.001:20) *cons.yr;
 et0 = t0 + dt_per;
 
-d_pe = zeros(length(tv),1);
+clear d
 for i=1:length(tv)
     xa   = cspice_conics(kep_opik_post, et0 + tv(i) );
     xe   = cspice_conics(kep_eat,       et0 + tv(i) );
-    d_pe(i) = norm(xe(1:3) - xa(1:3)); 
+    d(i) = norm(xe(1:3) - xa(1:3)); 
 end
 
 % Is the next encounter happening?
@@ -420,119 +410,69 @@ clf
 xsc = cons.yr;
 ysc = DU; %cons.Re;
 
-plot(tv/xsc, d_pe/ysc)
+plot(tv/xsc, d/ysc)
 grid on
 hold on
 xlabel('t (yr)')
 ylabel('d (au)')
 
-%%
-% Reading data from REBOUND
-dades = csvread(['PDCasteroid.txt']);
-        t = dades(1,:) + 30*24*3600;
-        d_py = dades(2,:);
-        
-F = figure(6);
-xsc = cons.yr;
-ysc = cons.AU;
+%% 9. Validation of conversions
+% - Does the relationship of the sma's hold?
+% - Does the initial position hold? d(0)=b?
 
-hold on
-plot(t/xsc,d_py/ysc)
-xlabel('time (yr)')
-ylabel('d (au)')
-grid on
-        
+k = circles(ic,1);
+h = circles(ic,2);
 
-% Compute MOID of integrated trajectory
-nt = size(dades,2);
-% IMPLEMENT TIME VARYING ELEMENTS OF EARTH for MOID
-kepE = kep_eat;
-kepE_sma = kepE';
-kepE_sma(1) = kepE(1)/(1-kepE(2));
+a_post_theory = DU*(k/h)^(2/3)
+a_post_opik   = kep_opik_post(1)/(1-kep_opik_post(2))
 
-for i=1:nt
-    kep_nbp = [dades(3:8,i)' t(i)+et0 cons.GMs];
-    moid_nbp_t(i) = MOID_SDG_win( kep_nbp([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
+
+
+%% ===== PLOTTING AUX: Trying to create B-plane plot ========
+%------- Plot coordinates given by hyperbolic elements
+% This part of the section is from older code
+kep_ast_O     = cspice_oscelt( state_ast_per, t0 + dt_per, cons.GMe );
+r_ast_O = state_ast_per(1:3);
+tv = (-24*5:1:24*5) *3600 ;
+d  = zeros(length(tv),1);
+for i=1:length(tv)
+    state_ast_t = cspice_conics(kep_ast_O, t0 + dt_per + tv(i) ); 
     
-    kep_nbp_peri = kep_nbp';
-    kep_nbp_peri(1) = kep_nbp_peri(1)*(1-kep_nbp_peri(2));
-    xa   = cspice_conics(kep_nbp_peri,  et0 + tv(i) );
-    xe   = cspice_conics(kep_eat,       et0 + tv(i) );
-    d_py2(i) = norm(xe(1:3) - xa(1:3)); 
-    
-end
-figure(5)
-
-plot(t/xsc, moid_nbp_t/ysc)
-hold on
-grid on
-
-figure(6)
-plot(t/xsc, d_py2/ysc)
-
-
-% Secular propagation
-kep0 = kep_opik_post;
-kep0_sma = kep_opik_post';
-kep0_sma(1) = kep0(1)/(1-kep0(2));
-
-MOID0 = MOID_SDG_win( kep0_sma([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
-
-state_jup = cspice_spkezr( '5',  et0, 'ECLIPJ2000', 'NONE', '10' );
-kepJ = cspice_oscelt( state_jup,   et0, cons.GMs );
-kepJ_sma = kepJ;
-kepJ_sma(1) = kepJ(1)/(1-kepJ(2));
-
-% Secular Model: Lagrange-Laplace
-cons.OEp = kepJ';
-cons.GMp = cspice_bodvrd( '599', 'GM', 1 );
-secular_model_LL = secular_model_10BP_s2(kep0_sma, cons, 1);
-tv = (0.:.001:20) *cons.yr;
-
-kep_LL_t = kep_opik_post;
-
-for i = 1:length(tv)
-    
-    [~,kep0_LL_t(i,:)] = drifted_oe_s2( secular_model_LL, tv(i), kep0_sma, kepJ' );
-    kep_LL_t(2:6) = kep0_LL_t(i,2:6); 
-    
-    xa   = cspice_conics(kep_LL_t, et0 + tv(i) );
-    xe   = cspice_conics(kep_eat,  et0 + tv(i) );
-    d_ll(i) = norm(xe(1:3) - xa(1:3)); 
-    
-    moid_LL_t(i) = MOID_SDG_win( kep0_LL_t(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
-    
+    d(i) = norm(state_ast_t(1:3)) ;
+    dr_ast_hyp(i,:) = state_ast_t(1:3);   
 end
 
-% Plot moid time evolutions
-F = figure(5);
+F = figure(11); clf;
+F.Position = [843 160 944 714];
 
-xsc = cons.yr;
-ysc = DU; %cons.Re;
-
-plot(tv([1 end])/xsc, MOID0*[1 1]/ysc, '--')
+sc3d = cons.Re;
+plot3( dr_ast_hyp(:,1)/sc3d, dr_ast_hyp(:,2)/sc3d, dr_ast_hyp(:,3)/sc3d,...
+    'LineWidth', 1.5 )
 hold on
-plot(tv/xsc, moid_LL_t/ysc)
-% plot(tv/xsc, moid_4bp_t/ysc)
-% plot(tv/xsc, d/ysc)
-% plot(tv/xsc, d2/ysc)
-
+[EX,EY,EZ] = sphere(20); R = cons.Re;
+surf( EX*R/sc3d, EY*R/sc3d, EZ*R/sc3d, ...
+    'EdgeColor', 'none', 'FaceAlpha', .2 )
+colormap winter
 grid on
-xlabel('time (yr)')
-ylabel('MOID (DU)');%(R_\oplus)')
+axis equal
+axis([-1 1 -1 1 -1 1]*25*cons.Re/sc3d)
+view(-50,20)
+xlabel('X_{H} (km) (~ -Sun)')
+ylabel('Y_{H} (km) (// V_p)')
+zlabel('Z_{H} (km) (// H_p)')
+plot3( r_ast_O(1)/sc3d, r_ast_O(2)/sc3d, r_ast_O(3)/sc3d , 'c+')
 
-legend('NBP','post-encounter','secLL')%,'4BP')
+plotBplane( phi, theta, 20, 11, 'b' );
 
-%-------------------------
-% Is the next encounter happening?
-F = figure(6);
+R = 20;
+quiver3(r_ast_O(1)/sc3d, r_ast_O(2)/sc3d, r_ast_O(3)/sc3d,...
+    R/2*st*sp, R/2*ct, R/2*st*cp,'Color','b',...
+        'LineWidth',2,'MaxHeadSize',2)
 
-% plot(tv/xsc, d/ysc)
-hold on
-plot(tv/xsc, d_ll/ysc)
+%------- Plot Bplane
+% This part of the section is from older code
+plotBplane( phi1, theta1, 20, 11, 'r' );
 
-grid on
-xlabel('time (yr)')
-ylabel('d (AU)')
-
-legend('post-enc','NBP','NBP-conE','sec-LL')
+quiver3(r_ast_O(1)/sc3d, r_ast_O(2)/sc3d, r_ast_O(3)/sc3d,...
+    R/2*st*sp, R/2*ct, R/2*st*cp,'Color','b',...
+        'LineWidth',2,'MaxHeadSize',2)

@@ -26,11 +26,8 @@ addpath(genpath(pwd))
 % - !!! If Earth not circular, review definition of Hill Frame
 
 %% 1. Read heliocentric elements
-% mice_local_path = 'C:\Users\Oscar\odrive\Google Drive (2)\MSc-ASEN\Research\Code2020\EncountersCode\mice';
-% mice_local_de431 = '2nd Author write here your directory';
-
-% dir_local_de431 = 'C:\Users\Oscar\Documents\Spice-Kernels\';
-dir_local_de431 = '/Users/anivid/ExampleMICE/kernels/spk/';
+dir_local_de431 = 'C:\Users\Oscar\Documents\Spice-Kernels\';
+% dir_local_de431 = '/Users/anivid/ExampleMICE/kernels/spk/';
 
 % addpath(genpath(mice_local_path))
 cspice_furnsh( 'SPICEfiles/naif0012.tls.pc' )
@@ -48,7 +45,7 @@ et = cspice_str2et( epoch ) + 24*.715*3600;
 
 cons.AU  = cspice_convrt(1, 'AU', 'KM');
 cons.GMs = cspice_bodvrd( 'SUN', 'GM', 10 );
-% cons.GMe = cspice_bodvrd( '3', 'GM', 1 );
+% cons.GMe = cspice_bodvrd( '399', 'GM', 1 );
 cons.GMe = 398600.43543609593;
 cons.Re  = 6378.140;
 
@@ -63,16 +60,18 @@ kep_ast = cspice_oscelt( state_ast, et, cons.GMs );
 sma_ast = kep_ast(1)/(1-kep_ast(2));
 
 %% 2. Modify elements for encounter with simpler Earth model
-% Make Earth Circular-Ecliptic -----
-kep_eat(2:3) = 0;
-
-% Modify NEO to try to make dCA smaller ----
-kep_ast(3) = kep_ast(3)+.2;     % Increase inclination
-kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
-kep_ast(6) = kep_ast(6)-0.0111; % Adjust timing for very close flyby
+% % Make Earth Circular-Ecliptic -----
+% kep_eat(2:3) = 0;
+% cons.yr = 2*pi/sqrt(cons.GMs/kep_eat(1)^3);
+% 
+% % Modify NEO to try to make dCA smaller ----
+% kep_ast(3) = kep_ast(3)+.2;     % Increase inclination
+% kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
+kep_ast(6) = kep_ast(6)-0.002; % Adjust timing for very close flyby
 
 % Generate states moments before the flyby
-dt = -4*24 * 3600;
+% dt = -4*24 * 3600;
+dt = 24*.715*3600;
 t0 = et + dt;
 
 state_ast = cspice_conics(kep_ast, t0);
@@ -277,6 +276,9 @@ for i=1:nr
     R1 = sqrt(sum(kh_down_xi.^2 + kh_down_zeta.^2,2));
     R2 = sqrt(sum(kh_up_xi.^2 + kh_up_zeta.^2,2));
     arcexist = sum( (R1-RE_au*focus_factor)>0 ) + sum( (R2-RE_au*focus_factor)>0 );
+    
+    arcexist = sum( kh_up_zeta > 2*RE_au*focus_factor );
+    
     if arcexist
         kh_good = [kh_good; i];
         fprintf('Keyhole num %g exists\n',i)
@@ -303,17 +305,9 @@ ylabel('\zeta (R_\oplus)');
 % Pick flyby from the keyholes and generate ICs
 
 % Manually select k
-kref = 15;
-ic = find( circles(:,1) == kref, 1 ) + 3;
-% Max radius from keyholes found
-[~,id] = max(abs(circles(kh_good,:)));
-ic = kh_good(id(3));
-% Finding circles with large radius list
-[~,id] = sort(abs(circles(kh_good,3)),'descend');
-ic = kh_good(49);
-% Final decision
-ic = 124;
-ic = 32; % kh_good(7);
+% kref = 15;
+% ic = find( circles(:,1) == kref, 1 ) + 3;
+ic = 65;
 
 k = circles(ic,1);
 h = circles(ic,2);
@@ -354,10 +348,10 @@ r0   = auxR'*[xi0; 0; zeta0];
 plot(xi0/sc, zeta0/sc,'rd','MarkerSize',8)
 
 %% 6. Solving the encounter with Opik formulae
-h = 0; % Number of revolutions until next encounter: only used for zeta2
+% h = 0; % Number of revolutions until next encounter: only used for zeta2
 
 % Using keyhole point selected: xi0, zeta0
-[~,theta1,phi1,xi1,zeta1,r_b_post,v_b_post] = opik_next(U_nd,theta,phi,xi0,zeta0,t0,h,m);
+[zeta2,theta1,phi1,xi1,zeta1,r_b_post,v_b_post] = opik_next(U_nd,theta,phi,xi0,zeta0,t0,h,m);
 
 
 % %% 6.1. TP to MTP
@@ -365,20 +359,18 @@ h = 0; % Number of revolutions until next encounter: only used for zeta2
 % xi1_p   = (U/V)*xi1 ;
 % zeta1_p = (U/V)*zeta1 ;
 % 
-% 
-% b    = (V/U)*b_p  ;
-% xi   = (V/U)*xi_p ;
-% zeta = (V/U)*zeta_p ;
-%  
 % % Rotation of velocity vector
 % hv     = cross( r_ast_O, v_ast_O );
-% hv     = cross( r_b_post, v_b_post );
+% % hv     = cross( r_b_post, v_b_post );
 % 
 % DCM    = PRV_2_DCM( -hgamma, hv/norm(hv) );
-% UVec   = (U/V)*DCM*v_ast_O;
-% theta  = acos(UVec(2)/U);
-% phi    = atan2(UVec(1),UVec(3));
-
+% VVec   = (V/U)*DCM*v_b_post;
+% theta1_p  = acos(VVec(2)/norm(VVec));
+% phi1_p    = atan2(VVec(1),VVec(3));
+% 
+% V_nd = V/(DU/TU);
+% 
+% kep_opik_post = opik_bplane_2_oe( theta1_p,phi1_p,zeta1_p,xi1_p,V_nd,phi1_p,longp,ap )'
 
 
 %% 7. Heliocentric orbit elements from post-encounter coordinates (Opik formulae)
@@ -417,6 +409,7 @@ ysc = DU; %cons.Re;
 
 plot(tv/xsc, d/ysc)
 grid on
+hold on
 xlabel('t (yr)')
 ylabel('d (au)')
 
