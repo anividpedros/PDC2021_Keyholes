@@ -1,0 +1,23 @@
+function Xdot = NBP_propagator(t,X,Input)
+
+    mus = Input.GM_vec(1);
+    t0 = Input.t0;
+
+    x = X(1:3);
+    v = X(4:6);
+
+    ag=-mus/norm(x)^3*x;
+    a3=zeros(3,1);
+    
+    for i=1:length(ThirdBody)
+        
+        state_planet = cspice_conics(kep_planet, t0 + dt_per);
+        xthird = state_planet(1:3)
+        a3=a3+mus(length(mus)+i-length(ThirdBody))*((xthird(:,i)-x)/norm(xthird(:,i)-x)^3-xthird(:,i)/norm(xthird(:,i))^3);
+    end
+
+    Xdot(1:3) = v;
+    Xdot(4:6) = ag+a3;
+
+
+end
