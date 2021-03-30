@@ -283,7 +283,7 @@ for i=1:nr
     arcexist = sum( (R1-RE_au*focus_factor)>0 ) + sum( (R2-RE_au*focus_factor)>0 );
     
     arcexist = sum( kh_up_zeta > 2*RE_au*focus_factor );
-    arcexist = sum( kh_down_zeta < -1.6*RE_au );
+%     arcexist = sum( kh_down_zeta < -1.6*RE_au );
     
     if arcexist
         kh_good = [kh_good; i];
@@ -314,7 +314,7 @@ ylabel('\zeta (R_\oplus)');
 % kref = 15;
 % ic = find( circles(:,1) == kref, 1 ) + 3;
 ic = 65;
-ic = 1;
+% ic = 1;
 
 k = circles(ic,1);
 h = circles(ic,2);
@@ -325,7 +325,7 @@ R = circles(ic,4)/cons.Re;
     two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
 
 % Plot selected keyhole
-figure(3)
+figure(2)
 cc = [1 0 0];
 sc = cons.Re/DU;
 
@@ -339,9 +339,9 @@ plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
 xi0   = kh_up_xi(ik(1));
 zeta0 = kh_up_zeta(ik(1));
 
-[~,ik] = min( abs(kh_down_xi) );
-xi0   = kh_down_xi(ik(1));
-zeta0 = kh_down_zeta(ik(1));
+% [~,ik] = min( abs(kh_down_xi) );
+% xi0   = kh_down_xi(ik(1));
+% zeta0 = kh_down_zeta(ik(1));
 
 % 2. Find the first point of the keyhole arc (arbirary as well)
 %--- Select depending on the arch being up or down
@@ -403,136 +403,150 @@ kep_opik_post(7:8) = [t0 + dt_per;
 
 
 %% 8. Plotting: distance over time with heliocentric elements
-% Compute distance to Earth
-tv = (-0.1:.001:20) *cons.yr;
+
+%% Post-encounter constant elements distance
+tv1 = (-0.1:.001:20) *cons.yr;
 et0 = t0 + dt_per;
 
-d_pe = zeros(length(tv),1);
-for i=1:length(tv)
-    xa   = cspice_conics(kep_opik_post, et0 + tv(i) );
-    xe   = cspice_conics(kep_eat,       et0 + tv(i) );
+d_pe = zeros(length(tv1),1);
+for i=1:length(tv1)
+    xa   = cspice_conics(kep_opik_post, et0 + tv1(i) );
+    xe   = cspice_conics(kep_eat,       et0 + tv1(i) );
     d_pe(i) = norm(xe(1:3) - xa(1:3)); 
 end
 
+% Initial condition
+kepE_sma = kep_eat';
+kepE_sma(1) = kep_eat(1)/(1-kep_eat(2));
+
+kep0 = kep_opik_post;
+kep0_sma = kep_opik_post';
+kep0_sma(1) = kep0(1)/(1-kep0(2));
+MOID0 = MOID_SDG_win( kep0_sma([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
+
+
+%% Numerical Integration of point
+eti = et0 + 30*86400 ; % Initial ephemeris time for integration
+X0  = cspice_conics(kep_opik_post, eti );
+tv  = ( 0:0.001:20 )*cons.yr;
+
+GMvec = cons.GMs;
+for i=2:9
+    GMvec(i)          = cspice_bodvrd( [num2str(i-1) ], 'GM', 1);
+    state_planet      = cspice_spkezr( [num2str(i-1) ],  eti, 'ECLIPJ2000', 'NONE', '10' );
+    kep_planet(:,i-1) = cspice_oscelt( state_planet, eti, cons.GMs );
+end
+kep_planet(:,3) = kep_eat ;
+GMvec(3) = cons.GMe;
+
+cons_ode.t0        = eti ;
+cons_ode.GM_vec    = GMvec ; % 1st element is Sun
+cons_ode.IC_planet = kep_planet ; % 1 column per planet
+
+tol = 1e-13;
+options=odeset('RelTol',tol,'AbsTol',ones(1,6)*tol);
+[t,X]=ode113(@(t,X) NBP_propagator(t,X,cons_ode),tv,X0,options);
+
+% Postprocessing
+
+
+d_nbp   = zeros(length(tv),1);
+kep_nbp = zeros(length(tv),8);
+MOIDnbp = zeros(length(tv),1);
+for i = 1:length(tv)
+    kep0_nbp     = cspice_oscelt( X(i,:)', eti+tv(i), cons.GMs );
+    kep_nbp(i,:) = kep0_nbp;
+    kep_nbp(i,1) = kep0_nbp(1)/(1-kep0_nbp(2));
+   
+    MOIDnbp(i) = MOID_ORCCA_win( K2S(kepE_sma,cons.AU), K2S(kep_nbp(i,:),cons.AU) ) *cons.AU;
+    
+    % Compute distance to Earth
+    xe   = cspice_conics(kep_eat, eti+tv(i) );
+    d_nbp(i) = norm(xe(1:3) - X(i,1:3)'); % From 4bp integration
+end
+
+
+%% Secular Propagation
+% Secular Model: Lagrange-Laplace
+kepJ_sma = kep_planet(:,5);
+kepJ_sma(1) = kepJ_sma(1)/(1-kepJ_sma(2));
+
+cons_sec.OEp = kepJ_sma';
+cons_sec.GMp = GMvec(6);
+cons_sec.GMs = GMvec(1);
+
+secular_model_LL = secular_model_10BP_s2(kep0_sma, cons_sec, 1);
+
+kep_LL_t = zeros(length(tv),6);
+kept = kep0_sma;
+for i = 1:length(tv)
+    
+    [~, kep0_LL_t(i,:)] = drifted_oe_s2( secular_model_LL, tv(i), kep0_sma, kepJ_sma' );
+    kept(2:6) = kep0_LL_t(i,2:6); 
+    kept(1)   = kep0_sma(1)*(1-kep0_LL_t(i,2));
+    
+    xa   = cspice_conics(kept',    eti + tv(i) );
+    xe   = cspice_conics(kep_eat,  eti + tv(i) );
+    d_ll(i) = norm(xe(1:3) - xa(1:3)); 
+    
+    MOIDsec(i) = MOID_SDG_win( kep0_LL_t(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
+    
+end
+
+
+%% Distance(t) Plot
 % Is the next encounter happening?
 F = figure(6);
 clf
 xsc = cons.yr;
 ysc = DU; %cons.Re;
 
-plot(tv/xsc, d_pe/ysc)
+plot(tv1/xsc, d_pe/ysc, 'b')
 grid on
 hold on
 xlabel('t (yr)')
 ylabel('d (au)')
 
-%%
-% Reading data from REBOUND
-dades = csvread(['PDCasteroid.txt']);
-        t = dades(1,:) + 30*24*3600;
-        d_py = dades(2,:);
-        
-F = figure(6);
-xsc = cons.yr;
-ysc = cons.AU;
+xt = (tv + eti - et0)/cons.yr ;
 
-hold on
-plot(t/xsc,d_py/ysc)
-xlabel('time (yr)')
-ylabel('d (au)')
-grid on
-        
+plot( xt, d_nbp/cons.AU, 'r' )
 
-% Compute MOID of integrated trajectory
-nt = size(dades,2);
-% IMPLEMENT TIME VARYING ELEMENTS OF EARTH for MOID
-kepE = kep_eat;
-kepE_sma = kepE';
-kepE_sma(1) = kepE(1)/(1-kepE(2));
-
-for i=1:nt
-    kep_nbp = [dades(3:8,i)' t(i)+et0 cons.GMs];
-    moid_nbp_t(i) = MOID_SDG_win( kep_nbp([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
-    
-    kep_nbp_peri = kep_nbp';
-    kep_nbp_peri(1) = kep_nbp_peri(1)*(1-kep_nbp_peri(2));
-    xa   = cspice_conics(kep_nbp_peri,  et0 + tv(i) );
-    xe   = cspice_conics(kep_eat,       et0 + tv(i) );
-    d_py2(i) = norm(xe(1:3) - xa(1:3)); 
-    
-end
-figure(5)
-
-plot(t/xsc, moid_nbp_t/ysc)
-hold on
-grid on
-
-figure(6)
-plot(t/xsc, d_py2/ysc)
+plot( xt, d_ll/ysc, 'g')
 
 
-% Secular propagation
-kep0 = kep_opik_post;
-kep0_sma = kep_opik_post';
-kep0_sma(1) = kep0(1)/(1-kep0(2));
-
-MOID0 = MOID_SDG_win( kep0_sma([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
-
-state_jup = cspice_spkezr( '5',  et0, 'ECLIPJ2000', 'NONE', '10' );
-kepJ = cspice_oscelt( state_jup,   et0, cons.GMs );
-kepJ_sma = kepJ;
-kepJ_sma(1) = kepJ(1)/(1-kepJ(2));
-
-% Secular Model: Lagrange-Laplace
-cons.OEp = kepJ';
-cons.GMp = cspice_bodvrd( '599', 'GM', 1 );
-secular_model_LL = secular_model_10BP_s2(kep0_sma, cons, 1);
-tv = (0.:.001:20) *cons.yr;
-
-kep_LL_t = kep_opik_post;
-
-for i = 1:length(tv)
-    
-    [~,kep0_LL_t(i,:)] = drifted_oe_s2( secular_model_LL, tv(i), kep0_sma, kepJ' );
-    kep_LL_t(2:6) = kep0_LL_t(i,2:6); 
-    
-    xa   = cspice_conics(kep_LL_t, et0 + tv(i) );
-    xe   = cspice_conics(kep_eat,  et0 + tv(i) );
-    d_ll(i) = norm(xe(1:3) - xa(1:3)); 
-    
-    moid_LL_t(i) = MOID_SDG_win( kep0_LL_t(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
-    
-end
-
-% Plot moid time evolutions
+%% MOID(t) Plot
 F = figure(5);
 
 xsc = cons.yr;
 ysc = DU; %cons.Re;
 
-plot(tv([1 end])/xsc, MOID0*[1 1]/ysc, '--')
+plot( tv1([1 end])/xsc, MOID0*[1 1]/ysc, 'b--' )
 hold on
-plot(tv/xsc, moid_LL_t/ysc)
-% plot(tv/xsc, moid_4bp_t/ysc)
-% plot(tv/xsc, d/ysc)
-% plot(tv/xsc, d2/ysc)
+plot( xt, MOIDnbp/ysc, 'r' )
+
+plot( xt, MOIDsec/ysc, 'g' )
 
 grid on
 xlabel('time (yr)')
 ylabel('MOID (DU)');%(R_\oplus)')
 
-legend('NBP','post-encounter','secLL')%,'4BP')
+legend('post-encounter','NBP','sec')%,'4BP')
 
-%-------------------------
-% Is the next encounter happening?
-F = figure(6);
 
-% plot(tv/xsc, d/ysc)
-hold on
-plot(tv/xsc, d_ll/ysc)
+%% Auxiliar Functions
 
-grid on
-xlabel('time (yr)')
-ylabel('d (AU)')
+% K2S(kepE_sma)
+% K2S(kep_nbp(1,:))
 
-legend('post-enc','NBP','NBP-conE','sec-LL')
+% MOID1 = MOID_ORCCA_win( K2S(kepE_sma), K2S(kep_nbp(i,:)) )
+% MOID2 = ComputeMOID( K2S(kep_nbp(i,:)), K2S(kepE_sma)  )    
+% MOID3 = MOID_SDG_win( kep_nbp(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) )
+
+% Keplerian elements into structure for MOID fxn
+function A = K2S(OE,AU) 
+A.sma   = OE(1)/AU;
+A.e     = OE(2);
+A.i     = OE(3);
+A.Omega = OE(4);
+A.argp  = OE(5);
+end

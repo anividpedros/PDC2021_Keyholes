@@ -21,7 +21,7 @@ function Xdot = NBP_propagator(t,X,Input)
         
     end
 
-    Xdot(1:3) = v;
-    Xdot(4:6) = ag+a3;
+    Xdot(1:3,1) = v;
+    Xdot(4:6,1) = ag+a3;
 
 end
