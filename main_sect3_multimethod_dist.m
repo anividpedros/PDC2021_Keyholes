@@ -283,6 +283,7 @@ for i=1:nr
     arcexist = sum( (R1-RE_au*focus_factor)>0 ) + sum( (R2-RE_au*focus_factor)>0 );
     
     arcexist = sum( kh_up_zeta > 2*RE_au*focus_factor );
+    arcexist = sum( kh_down_zeta < -1.6*RE_au );
     
     if arcexist
         kh_good = [kh_good; i];
@@ -313,6 +314,7 @@ ylabel('\zeta (R_\oplus)');
 % kref = 15;
 % ic = find( circles(:,1) == kref, 1 ) + 3;
 ic = 65;
+ic = 1;
 
 k = circles(ic,1);
 h = circles(ic,2);
@@ -323,7 +325,7 @@ R = circles(ic,4)/cons.Re;
     two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
 
 % Plot selected keyhole
-figure(2)
+figure(3)
 cc = [1 0 0];
 sc = cons.Re/DU;
 
@@ -336,6 +338,10 @@ plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
 [~,ik] = min( abs(kh_up_xi) );
 xi0   = kh_up_xi(ik(1));
 zeta0 = kh_up_zeta(ik(1));
+
+[~,ik] = min( abs(kh_down_xi) );
+xi0   = kh_down_xi(ik(1));
+zeta0 = kh_down_zeta(ik(1));
 
 % 2. Find the first point of the keyhole arc (arbirary as well)
 %--- Select depending on the arch being up or down
@@ -379,6 +385,8 @@ plot(xi0/sc, zeta0/sc,'rd','MarkerSize',8)
 
 
 %% 7. Heliocentric orbit elements from post-encounter coordinates (Opik formulae)
+longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense should be longitude
+longp = atan2( state_eat(2),state_eat(1) );
 kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U_nd,phi,longp,ap )';
 
 kep_opik_post(1) = kep_opik_post(1)*(1-kep_opik_post(2))*DU ; 
@@ -396,10 +404,10 @@ kep_opik_post(7:8) = [t0 + dt_per;
 
 %% 8. Plotting: distance over time with heliocentric elements
 % Compute distance to Earth
-tv = (0.:.001:20) *cons.yr;
+tv = (-0.1:.001:20) *cons.yr;
 et0 = t0 + dt_per;
 
-clear d
+d_pe = zeros(length(tv),1);
 for i=1:length(tv)
     xa   = cspice_conics(kep_opik_post, et0 + tv(i) );
     xe   = cspice_conics(kep_eat,       et0 + tv(i) );
@@ -418,9 +426,9 @@ hold on
 xlabel('t (yr)')
 ylabel('d (au)')
 
-
+%%
 % Reading data from REBOUND
-dades = csvread(['PDCasteroid']);
+dades = csvread(['PDCasteroid.txt']);
         t = dades(1,:) + 30*24*3600;
         d_py = dades(2,:);
         
@@ -525,6 +533,6 @@ plot(tv/xsc, d_ll/ysc)
 
 grid on
 xlabel('time (yr)')
-ylabel('d (R_\oplus)')
+ylabel('d (AU)')
 
 legend('post-enc','NBP','NBP-conE','sec-LL')
