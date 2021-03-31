@@ -206,6 +206,10 @@ dxi = zeros(nr,1);
 % longitude for MOID computation inside
 longp = atan2(state_eat(2),state_eat(1));
 
+% Initial condition
+kepE_sma = kep_eat';
+kepE_sma(1) = kep_eat(1)/(1-kep_eat(2));
+
 for i=1:nr
     
     % New circles
@@ -215,7 +219,7 @@ for i=1:nr
     R = circles(i,4)/cons.Re;    
     
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-        two_keyholes_dxi(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap);
+        two_keyholes_dxi(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma);
     
     cc = co(k,:);    
     plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...

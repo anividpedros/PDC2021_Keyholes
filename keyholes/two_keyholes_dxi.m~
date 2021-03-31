@@ -1,4 +1,4 @@
-function [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = two_keyholes_dxi(k,h,D,R,U,theta,phi,m,t0,DU,longp,ap)
+function [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = two_keyholes_dxi(k,h,D,R,U,theta,phi,m,t0,DU,longp,ap,cons)
 %% COMPUTE KEYHOLES FOR A GIVEN RESONANCE
 
 % Convert to dimensionless units (au, but here we use the real distance of
@@ -8,6 +8,8 @@ RE_km = 6378.140;
 RE_au = RE_km/DU;
 D_au = D*RE_au;
 R_au = R*RE_au;
+
+AU = cons.AU;
 
 %% The following part should be included in a loop for all -b_Earth < xi < b_Earth
 
@@ -36,10 +38,12 @@ for i = 1:nkh
     [~,theta1,phi1,xi1,zeta1,~] = opik_next(U,theta,phi,xi,zeta,t0,h,m);
     % Post-Encounter Heliocentric Orbit Elements
     kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U,phi,longp,ap)';
+    
+    % PENDING !!!!!!!!!!!!!!!
     moid0 = MOID_ORCCA_win( K2S(kepE_sma,cons.AU), K2S(kep_nbp(i,:),cons.AU) ) *cons.AU;
-    % Compute dxi
-    dxi(i) = xi2 - xi1;
-    moid1
+    moid1 = 0;
+    
+    dx = moid1 - moid0;
     
     if (abs(xi1 + dx) > bEarth_au)
         zeta_edges(i,:) = NaN;

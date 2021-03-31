@@ -533,20 +533,3 @@ ylabel('MOID (DU)');%(R_\oplus)')
 legend('post-encounter','NBP','sec')%,'4BP')
 
 
-%% Auxiliar Functions
-
-% K2S(kepE_sma)
-% K2S(kep_nbp(1,:))
-
-% MOID1 = MOID_ORCCA_win( K2S(kepE_sma), K2S(kep_nbp(i,:)) )
-% MOID2 = ComputeMOID( K2S(kep_nbp(i,:)), K2S(kepE_sma)  )    
-% MOID3 = MOID_SDG_win( kep_nbp(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) )
-
-% Keplerian elements into structure for MOID fxn
-function A = K2S(OE,AU) 
-A.sma   = OE(1)/AU;
-A.e     = OE(2);
-A.i     = OE(3);
-A.Omega = OE(4);
-A.argp  = OE(5);
-end
