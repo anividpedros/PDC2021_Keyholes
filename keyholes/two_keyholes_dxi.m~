@@ -36,12 +36,11 @@ for i = 1:nkh
     [~,theta1,phi1,xi1,zeta1,~] = opik_next(U,theta,phi,xi,zeta,t0,h,m);
     % Post-Encounter Heliocentric Orbit Elements
     kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U,phi,longp,ap)';
-    
-    % PENDING !!!!!!!!!!!!!!!
     moid0 = MOID_ORCCA_win( K2S(kepE_sma,cons.AU), K2S(kep_nbp(i,:),cons.AU) ) *cons.AU;
-    moid1 = 0;
+    % Compute dxi
+    dxi(i) = xi2 - xi1;
+    moid1
     
-    dx = moid1 - moid0;
     if (abs(xi1 + dx) > bEarth_au)
         zeta_edges(i,:) = NaN;
         xi_edges(i,:)   = NaN;

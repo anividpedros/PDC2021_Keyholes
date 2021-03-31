@@ -385,7 +385,7 @@ plot(xi0/sc, zeta0/sc,'rd','MarkerSize',8)
 
 
 %% 7. Heliocentric orbit elements from post-encounter coordinates (Opik formulae)
-longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense should be longitude
+% longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense should be longitude
 longp = atan2( state_eat(2),state_eat(1) );
 kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U_nd,phi,longp,ap )';
 
