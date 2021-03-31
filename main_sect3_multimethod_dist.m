@@ -429,7 +429,7 @@ plot(xi0/sc, zeta0/sc,'rd','MarkerSize',8)
 
 
 % 7. Heliocentric orbit elements from post-encounter coordinates (Opik formulae)
-longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense should be longitude
+%longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense should be longitude
 longp = atan2( state_eat(2),state_eat(1) );
 kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U_nd,phi,longp,ap )';
 
@@ -473,7 +473,7 @@ MOID0 = MOID_SDG_win( kep0_sma([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
 eti = et0 + 30*86400 ; % Initial ephemeris time for integration
 X0  = cspice_conics(kep_opik_post, eti );
 tv  = ( 0:0.001:20 )*cons.yr;
-
+kep_planet = NaN(8,8);
 GMvec = cons.GMs;
 for i=2:9
     GMvec(i)          = cspice_bodvrd( [num2str(i-1) ], 'GM', 1);
@@ -580,20 +580,3 @@ ylabel('MOID R_\oplus)')%(DU)');
 legend('post-enc','n3BPert','sec-LL')%,'4BP')
 xlim(tv1([1 end])/xsc)
 
-%% Auxiliar Functions
-
-% K2S(kepE_sma)
-% K2S(kep_nbp(1,:))
-
-% MOID1 = MOID_ORCCA_win( K2S(kepE_sma), K2S(kep_nbp(i,:)) )
-% MOID2 = ComputeMOID( K2S(kep_nbp(i,:)), K2S(kepE_sma)  )    
-% MOID3 = MOID_SDG_win( kep_nbp(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) )
-
-% Keplerian elements into structure for MOID fxn
-function A = K2S(OE,AU) 
-A.sma   = OE(1)/AU;
-A.e     = OE(2);
-A.i     = OE(3);
-A.Omega = OE(4);
-A.argp  = OE(5);
-end
