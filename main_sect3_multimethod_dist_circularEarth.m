@@ -5,7 +5,7 @@ clear
 close all
 format shortG
 
-filename = 'main_sect3_multimethod_dist.m';
+filename = 'main_sect3_multimethod_dist_circularEarth.m';
 filepath = matlab.desktop.editor.getActiveFilename;
 currPath = filepath(1:(end-length(filename)));
 cd(currPath)
@@ -14,7 +14,7 @@ addpath(genpath(pwd))
 %% ===== Description ===== 
 % Original script: main_1flyby_pdc2021.m
 % Extension: Generate distance(t) plots given post-encounter coordinates
-%  =======================
+% =======================
 
 %% Script steps
 % 1. Read heliocentric elements (spice file) - date close to the encounter
@@ -47,21 +47,19 @@ ast_id= '-937014';
 epoch = '2021 October 20 TDB';
 et = cspice_str2et( epoch ) + 24*.715*3600;
 
-% Bennu
-ast_id= '-101955';
-epoch = '2060-Sep-22 00:36';
-
-% 2017 PDC
-cspice_furnsh( 'SPICEfiles/2017_PDC-merged-DE431.bsp' )
-ast_id= '-937001';
-epoch = '2027 July 20 15:00 TDB';
-et = cspice_str2et( epoch ) + 24*.715*3600;
-
-% Apophis
-epoch = '2029-Apr-12 21:46:00.0000 TDB';
-et = cspice_str2et( epoch ) ;
-
-
+% % Bennu
+% ast_id= '-101955';
+% epoch = '2060-Sep-22 00:36';
+% 
+% % 2017 PDC
+% cspice_furnsh( 'SPICEfiles/2017_PDC-merged-DE431.bsp' )
+% ast_id= '-937001';
+% epoch = '2027 July 20 15:00 TDB';
+% et = cspice_str2et( epoch ) + 24*.715*3600;
+% 
+% % Apophis
+% epoch = '2029-Apr-12 21:46:00.0000 TDB';
+% et = cspice_str2et( epoch ) ;
 
 cons.AU  = cspice_convrt(1, 'AU', 'KM');
 cons.GMs = cspice_bodvrd( 'SUN', 'GM', 10 );
@@ -76,48 +74,26 @@ state_eat = cspice_spkezr( '399', et, 'ECLIPJ2000', 'NONE', '10' );
 kep_eat = cspice_oscelt( state_eat, et, cons.GMs );
 sma_eat = kep_eat(1)/(1-kep_eat(2));
 
-% state_ast = cspice_spkezr( ast_id, et, 'ECLIPJ2000', 'NONE', '10' );
-% kep_ast = cspice_oscelt( state_ast, et, cons.GMs );
-% sma_ast = kep_ast(1)/(1-kep_ast(2));
+state_ast = cspice_spkezr( ast_id, et, 'ECLIPJ2000', 'NONE', '10' );
+kep_ast = cspice_oscelt( state_ast, et, cons.GMs );
+sma_ast = kep_ast(1)/(1-kep_ast(2));
 
-kep_ast = [1.109226568768932E+08 1.952935182366752E-01 3.415493133874123E+00 2.037874906198153E+02 1.266459636185671E+02 2.518558078117354E+02]';
-kep_ast(3:6) = kep_ast(3:6)*pi/180;
-kep_ast(7:8) = [et; cons.GMs];
+% kep_ast = [1.109226568768932E+08 1.952935182366752E-01 3.415493133874123E+00 2.037874906198153E+02 1.266459636185671E+02 2.518558078117354E+02]';
+% kep_ast(3:6) = kep_ast(3:6)*pi/180;
+% kep_ast(7:8) = [et; cons.GMs];
 
+%% 2. Modify elements for encounter with simpler Earth model
+% Make Earth Circular-Ecliptic -----
+kep_eat(2:3) = 0;
+cons.yr = 2*pi/sqrt(cons.GMs/kep_eat(1)^3);
 
-%% 2. Modify elements for encounter with simpler Earth model === [Section for 2021 PDC]
-% % % Make Earth Circular-Ecliptic -----
-% % kep_eat(2:3) = 0;
-% cons.yr = 2*pi/sqrt(cons.GMs/sma_eat^3);
-% 
-% % 
-% % % Modify NEO to try to make dCA smaller ----
-% % kep_ast(3) = kep_ast(3)+.2;     % Increase inclination
-% % kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
-% kep_ast(6) = kep_ast(6)-0.002; % Adjust timing for very close flyby
-% 
-% % Generate states moments before the flyby
-% % dt = -4*24 * 3600;
-% dt = 24*.715*3600;
-% t0 = et + dt;
-% 
-% state_ast = cspice_conics(kep_ast, t0);
-% state_eat = cspice_conics(kep_eat, t0);
-
-%% 2. Modify elements for encounter with simpler Earth model === [Section for 2021 PDC]
-% % Make Earth Circular-Ecliptic -----
-% kep_eat(2:3) = 0;
-cons.yr = 2*pi/sqrt(cons.GMs/sma_eat^3);
-
-% 
-% % % Modify NEO to try to make dCA smaller ----
-% % kep_ast(3) = kep_ast(3)+.2;     % Increase inclination
-% % kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
-kep_ast(6) = kep_ast(6)-0.002; % Adjust timing for very close flyby
+% Modify NEO to try to make dCA smaller ----
+kep_ast(3) = kep_ast(3)+.2;     % Increase inclination
+kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
+kep_ast(6) = kep_ast(6)-0.0111; % Adjust timing for very close flyby
 
 % Generate states moments before the flyby
-% dt = -4*24 * 3600;
-dt = 0; %24*.715*3600;
+dt = -4*24 * 3600;
 t0 = et + dt;
 
 state_ast = cspice_conics(kep_ast, t0);
@@ -324,8 +300,8 @@ for i=1:nr
     arcexist = sum( (R1-RE_au*focus_factor)>0 ) + sum( (R2-RE_au*focus_factor)>0 );
     
     arcexist = sum( kh_up_zeta > 2*RE_au*focus_factor );
-    arcexist = sum( kh_down_zeta < -2.5*RE_au );
-    arcexist = sum( kh_up_zeta > 3.6*RE_au );
+    arcexist = sum( kh_down_zeta < -5*RE_au );
+%     arcexist = sum( kh_up_zeta > 3.6*RE_au );
     
     if arcexist
         kh_good = [kh_good; i];
@@ -353,12 +329,7 @@ ylabel('\zeta (R_\oplus)');
 % Pick flyby from the keyholes and generate ICs
 
 % Manually select k
-% kref = 15;
-% ic = find( circles(:,1) == kref, 1 ) + 3;
-ic = 65;
-% ic = 186;
-% ic = 252;
-ic = 110;
+ic = 86 ;
 
 k = circles(ic,1);
 h = circles(ic,2);
@@ -389,13 +360,13 @@ zeta0 = kh_up_zeta(ik(1));
 
 % 2. Find the first point of the keyhole arc (arbirary as well)
 %--- Select depending on the arch being up or down
-ik = find( ~isnan(kh_up_xi),1, 'last' ); 
-xi0   = kh_up_xi(ik);
-zeta0 = kh_up_zeta(ik);
+% ik = find( ~isnan(kh_up_xi),1, 'last' ); 
+% xi0   = kh_up_xi(ik);
+% zeta0 = kh_up_zeta(ik);
 
-% ik = find( ~isnan(kh_down_xi), 1 ); 
-% xi0   = kh_down_xi(ik);
-% zeta0 = kh_down_zeta(ik);
+ik = find( ~isnan(kh_down_xi), 1 ); 
+xi0   = kh_down_xi(ik);
+zeta0 = kh_down_zeta(ik);
 
 auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp];
 r0   = auxR'*[xi0; 0; zeta0];
@@ -543,8 +514,10 @@ end
 % Is the next encounter happening?
 F = figure(6);
 clf
+F.Position = [-1203 239 560 189];
+
 xsc = cons.yr;
-ysc = cons.Re;
+ysc = cons.AU; %cons.Re;
 
 plot(tv1/xsc, d_pe/ysc, 'b')
 grid on
@@ -563,6 +536,7 @@ legend('post-enc','n3BPert','sec-LL')
 % MOID(t) Plot
 F = figure(5);
 clf
+F.Position = [-1202 -54 560 189];
 
 xsc = cons.yr;
 ysc = cons.Re;
