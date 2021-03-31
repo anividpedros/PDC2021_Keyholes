@@ -24,12 +24,17 @@ nkh = 100;
 % For each of these values, compute the keyhole width.
 
 % Keyhole - bottom
-zeta_edges = zeros(nkh,2);
-xi_edges = zeros(nkh,2);
+zeta_edges = nan(nkh,2);
+xi_edges = nan(nkh,2);
 for i = 1:nkh
     
     xi = xi_down(i);
     zeta = zeta_down(i);
+    
+%------ New Code ------    
+    if sqrt(xi^2+zeta^2) < bEarth_au
+        continue
+    end
     
     % Check if xi1 <= b_Eart
 
@@ -37,18 +42,27 @@ for i = 1:nkh
     % Post-Encounter Heliocentric Orbit Elements
     kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U,phi,longp,ap)';
     
-    moid0 = MOID_ORCCA_win(K2S(kepE_sma,AU), K2S(kep_opik_post,AU))*AU;
+    kep_opik_post(1) = kep_opik_post(1)*(1-kep_opik_post(2))*DU ; % 'opik_bplane_2_oe.m' function returns sma in first element
+    kep_opik_post(6) = TA_2_MA(kep_opik_post(6),kep_opik_post(2));% 'opik_bplane_2_oe.m' function returns true anomaly 6th element
+    % !!!!!!! INPUT EPHEMERIS TIME IF NEEDED FOR NUM
+    kep_opik_post(7:8) = [t0;
+                        cons.GMs];
+
     kep0_sma = kep_opik_post';
-    kep0_sma(1) = kep0(1)/(1-kep0(2));
+    kep0_sma(1) = kep0_sma(1)/(1-kep0_sma(2));
+
+    moid0 = MOID_ORCCA_win(K2S(kepE_sma,AU), K2S(kep0_sma,AU));
     
     At = k * cons.yr;
     % SECULAR PROPAGATION
+    secular_model_LL = secular_model_10BP_s2(kep0_sma, cons_sec, 1);
     [~, kep0_LL_t] = drifted_oe_s2( secular_model_LL, At, kep0_sma, cons_sec.OEp);
-
 
     moid1 = MOID_ORCCA_win( K2S(kepE_sma,AU), K2S(kep0_LL_t,AU));
 
     dx = moid1 - moid0;
+%     dx = 0;
+%------------------------
     
     if (abs(xi1 + dx) > bEarth_au)
         zeta_edges(i,:) = NaN;
@@ -64,7 +78,7 @@ for i = 1:nkh
     
     % Find the value of zeta leading to a direct impact
     try
-        [zeta0,~] = fzero(@(zeta) opik_next(U,theta,phi,xi,zeta,t0,h),[zetapp1,zetapp2]);
+        [zeta0,~] = fzero(@(zeta) opik_next(U,theta,phi,xi,zeta,t0,h,m),[zetapp1,zetapp2]);
     catch
         %disp(['fzero error at i =',i]);
         zeta_edges(i,:) = NaN;
@@ -75,7 +89,7 @@ for i = 1:nkh
     % Compute keyhole edges
     zeta2_edges = [sqrt(bEarth_au^2 - xi2^2), -sqrt(bEarth_au^2 - xi2^2)];
     
-    [~,theta1,phi1,xi1,zeta1] = opik_next(U,theta,phi,xi,zeta0,t0,h);
+    [~,theta1,phi1,xi1,zeta1] = opik_next(U,theta,phi,xi,zeta0,t0,h,m);
     dz2dz = dzeta2dzeta(U,theta,phi,xi,zeta0,m,h,theta1,phi1,xi1,zeta1);
     zeta_edges(i,:) = zeta0 + zeta2_edges/dz2dz;
     xi_edges(i,:) = [xi,xi];
@@ -85,15 +99,44 @@ kh_down_xi = xi_edges;
 kh_down_zeta = zeta_edges;
 
 % Keyhole - top
-zeta_edges = zeros(nkh,2);
-xi_edges = zeros(nkh,2);
+zeta_edges = nan(nkh,2);
+xi_edges = nan(nkh,2);
 for i = 1:nkh
     
     xi = xi_up(i);
     zeta = zeta_up(i);
     
-    % Check if xi1 <= b_Earth
-    [~,~,~,xi1,~] = opik_next(U,theta,phi,xi,zeta,t0,h);
+    if sqrt(xi^2+zeta^2) < bEarth_au
+        continue
+    end
+    
+    % Check if xi1 <= b_Eart
+
+    [~,theta1,phi1,xi1,zeta1,~] = opik_next(U,theta,phi,xi,zeta,t0,h,m);
+    % Post-Encounter Heliocentric Orbit Elements
+    kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U,phi,longp,ap)';
+    
+    kep_opik_post(1) = kep_opik_post(1)*(1-kep_opik_post(2))*DU ; % 'opik_bplane_2_oe.m' function returns sma in first element
+    kep_opik_post(6) = TA_2_MA(kep_opik_post(6),kep_opik_post(2));% 'opik_bplane_2_oe.m' function returns true anomaly 6th element
+    % !!!!!!! INPUT EPHEMERIS TIME IF NEEDED FOR NUM
+    kep_opik_post(7:8) = [t0;
+                        cons.GMs];
+
+    kep0_sma = kep_opik_post';
+    kep0_sma(1) = kep0_sma(1)/(1-kep0_sma(2));
+
+    moid0 = MOID_ORCCA_win(K2S(kepE_sma,AU), K2S(kep0_sma,AU));
+    
+    At = k * cons.yr;
+    % SECULAR PROPAGATION
+    secular_model_LL = secular_model_10BP_s2(kep0_sma, cons_sec, 1);
+    [~, kep0_LL_t] = drifted_oe_s2( secular_model_LL, At, kep0_sma, cons_sec.OEp);
+
+    moid1 = MOID_ORCCA_win( K2S(kepE_sma,AU), K2S(kep0_LL_t,AU));
+
+    dx = moid1 - moid0;
+%     dx = 0;
+    
     if (abs(xi1 + dx) > bEarth_au)
         zeta_edges(i,:) = NaN;
         xi_edges(i,:)   = NaN;
@@ -116,7 +159,7 @@ for i = 1:nkh
         
     % Find the value of zeta leading to a direct impact
     try
-        [zeta0,~] = fzero(@(zeta) opik_next(U,theta,phi,xi,zeta,t0,h),[zetapp1,zetapp2]);
+        [zeta0,~] = fzero(@(zeta) opik_next(U,theta,phi,xi,zeta,t0,h,m),[zetapp1,zetapp2]);
     catch
         %disp(['fzero error at i =',i]);
         zeta_edges(i,:) = NaN;
@@ -127,7 +170,7 @@ for i = 1:nkh
     % Compute keyhole edges
     zeta2_edges = [sqrt(bEarth_au^2 - xi2^2), -sqrt(bEarth_au^2 - xi2^2)];
     
-    [~,theta1,phi1,xi1,zeta1] = opik_next(U,theta,phi,xi,zeta0,t0,h);
+    [~,theta1,phi1,xi1,zeta1] = opik_next(U,theta,phi,xi,zeta0,t0,h,m);
     dz2dz = dzeta2dzeta(U,theta,phi,xi,zeta0,m,h,theta1,phi1,xi1,zeta1);
     zeta_edges(i,:) = zeta0 + zeta2_edges/dz2dz;
     xi_edges(i,:) = [xi,xi];

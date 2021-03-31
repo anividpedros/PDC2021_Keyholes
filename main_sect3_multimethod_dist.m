@@ -325,7 +325,7 @@ for i=1:nr
     
     arcexist = sum( kh_up_zeta > 2*RE_au*focus_factor );
     arcexist = sum( kh_down_zeta < -2.5*RE_au );
-    arcexist = sum( kh_up_zeta > 3.6*RE_au );
+    arcexist = sum( kh_up_zeta > 2.2*RE_au );
     
     if arcexist
         kh_good = [kh_good; i];
@@ -358,7 +358,7 @@ ylabel('\zeta (R_\oplus)');
 ic = 65;
 % ic = 186;
 % ic = 252;
-ic = 110;
+% ic = 110;
 
 k = circles(ic,1);
 h = circles(ic,2);
@@ -402,6 +402,7 @@ r0   = auxR'*[xi0; 0; zeta0];
 
 plot(xi0/sc, zeta0/sc,'rd','MarkerSize',8)
 
+%%
 % 6. Solving the encounter with Opik formulae
 % h = 0; % Number of revolutions until next encounter: only used for zeta2
 

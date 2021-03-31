@@ -1,6 +1,6 @@
 %% 1. Read heliocentric elements
-% dir_local_de431 = 'C:\Users\Oscar\Documents\Spice-Kernels\';
-dir_local_de431 = '/Users/anivid/ExampleMICE/kernels/spk/';
+dir_local_de431 = 'C:\Users\Oscar\Documents\Spice-Kernels\';
+% dir_local_de431 = '/Users/anivid/ExampleMICE/kernels/spk/';
 
 % addpath(genpath(mice_local_path))
 cspice_furnsh( 'SPICEfiles/naif0012.tls.pc' )
@@ -229,14 +229,14 @@ cons_sec.OEp = kepJ_sma';
 cons_sec.GMp = GMvec(6);
 cons_sec.GMs = GMvec(1);
 
-secular_model_LL = secular_model_10BP_s2(kep0_sma, cons_sec, 1);
+% secular_model_LL = secular_model_10BP_s2(kep0_sma, cons_sec, 1);
 
 kept = kep0_sma;
 
 
 
 
-for i=1:nr
+for i=1:100%nr
     
     % New circles
     k = circles(i,1);
@@ -244,15 +244,24 @@ for i=1:nr
     D = circles(i,3)/cons.Re;    
     R = circles(i,4)/cons.Re;    
     
+    try
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
         two_keyholes_dxi_sec(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,secular_model_LL,cons_sec);
+%     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+%           two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
+    catch
+        
+    end
     
     cc = co(k,:);    
+%     cc = [0 1 1];
+    cc = [1 0 0];
     plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
         'Color',cc);
     plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
          'Color',cc);
-     
+    
+    drawnow 
     % Register keyholes with solutions
 %     arcexist = sum(~isnan(kh_up_xi)) + sum(~isnan(kh_down_xi));
     R1 = sqrt(sum(kh_down_xi.^2 + kh_down_zeta.^2,2));
@@ -274,11 +283,12 @@ fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
 plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
 plot(cos(thv), sin(thv),'k--');
 
+%%
 grid on
 axis equal
 caxis([1 20])
 cb = colorbar;
 cb.Label.String = 'k';
-axis([-1 1 -1 1]*10)
+axis([-1 1 -1 1]*5)
 xlabel('\xi (R_\oplus)');
 ylabel('\zeta (R_\oplus)');
