@@ -229,14 +229,11 @@ cons_sec.OEp = kepJ_sma';
 cons_sec.GMp = GMvec(6);
 cons_sec.GMs = GMvec(1);
 
-% secular_model_LL = secular_model_10BP_s2(kep0_sma, cons_sec, 1);
-
 kept = kep0_sma;
 
 
 
-
-for i=1:100%nr
+for i=1:nr
     
     % New circles
     k = circles(i,1);
@@ -246,7 +243,7 @@ for i=1:100%nr
     
     try
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-        two_keyholes_dxi_sec(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,secular_model_LL,cons_sec);
+        two_keyholes_dxi_sec(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_sec);
 %     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
 %           two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
     catch

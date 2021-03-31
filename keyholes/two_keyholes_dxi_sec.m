@@ -1,4 +1,4 @@
-function [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = two_keyholes_dxi_sec(k,h,D,R,U,theta,phi,m,t0,DU,longp,ap,cons, kepE_sma,secular_model_LL,cons_sec)
+function [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = two_keyholes_dxi_sec(k,h,D,R,U,theta,phi,m,t0,DU,longp,ap,cons, kepE_sma,cons_sec)
 %% COMPUTE KEYHOLES FOR A GIVEN RESONANCE
 
 % Convert to dimensionless units (au, but here we use the real distance of
