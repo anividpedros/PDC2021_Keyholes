@@ -1,4 +1,4 @@
-function [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = two_keyholes_dxi(k,h,D,R,U,theta,phi,m,t0,DU,longp,ap,cons, kepE_sma)
+function [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = two_keyholes_dxi_sec(k,h,D,R,U,theta,phi,m,t0,DU,longp,ap,cons, kepE_sma,secular_model_LL,cons_sec)
 %% COMPUTE KEYHOLES FOR A GIVEN RESONANCE
 
 % Convert to dimensionless units (au, but here we use the real distance of
@@ -38,14 +38,16 @@ for i = 1:nkh
     kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U,phi,longp,ap)';
     
     moid0 = MOID_ORCCA_win(K2S(kepE_sma,AU), K2S(kep_opik_post,AU))*AU;
+    kep0_sma = kep_opik_post';
+    kep0_sma(1) = kep0(1)/(1-kep0(2));
     
-    
+    At = k * cons.yr;
     % SECULAR PROPAGATION
+    [~, kep0_LL_t] = drifted_oe_s2( secular_model_LL, At, kep0_sma, cons_sec.OEp);
 
-    kep_opik_post_2 = kep_opik_post; %PENDING
-    
-    moid1 = MOID_ORCCA_win(K2S(kepE_sma,AU), K2S(kep_opik_post_2,AU))*AU;
-    
+
+    moid1 = MOID_ORCCA_win( K2S(kepE_sma,AU), K2S(kep0_LL_t,AU));
+
     dx = moid1 - moid0;
     
     if (abs(xi1 + dx) > bEarth_au)

@@ -1,4 +1,4 @@
-function [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = two_keyholes_dxi(k,h,D,R,U,theta,phi,m,t0,DU,longp,ap,cons)
+function [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = two_keyholes_dxi_num(k,h,D,R,U,theta,phi,m,t0,DU,longp,ap,cons, kepE_sma)
 %% COMPUTE KEYHOLES FOR A GIVEN RESONANCE
 
 % Convert to dimensionless units (au, but here we use the real distance of
@@ -31,17 +31,20 @@ for i = 1:nkh
     xi = xi_down(i);
     zeta = zeta_down(i);
     
-    % Check if xi1 <= b_Earth
+    % Check if xi1 <= b_Eart
 
-
-    
     [~,theta1,phi1,xi1,zeta1,~] = opik_next(U,theta,phi,xi,zeta,t0,h,m);
     % Post-Encounter Heliocentric Orbit Elements
     kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U,phi,longp,ap)';
     
-    % PENDING !!!!!!!!!!!!!!!
-    moid0 = MOID_ORCCA_win( K2S(kepE_sma,cons.AU), K2S(kep_nbp(i,:),cons.AU) ) *cons.AU;
-    moid1 = 0;
+    moid0 = MOID_ORCCA_win(K2S(kepE_sma,AU), K2S(kep_opik_post,AU))*AU;
+    
+    
+    % SECULAR PROPAGATION
+
+    kep_opik_post_2 = kep_opik_post; %PENDING
+    
+    moid1 = MOID_ORCCA_win(K2S(kepE_sma,AU), K2S(kep_opik_post_2,AU))*AU;
     
     dx = moid1 - moid0;
     

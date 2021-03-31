@@ -429,7 +429,7 @@ MOID0 = MOID_SDG_win( kep0_sma([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
 eti = et0 + 30*86400 ; % Initial ephemeris time for integration
 X0  = cspice_conics(kep_opik_post, eti );
 tv  = ( 0:0.001:20 )*cons.yr;
-
+kep_planet = NaN(8,8);
 GMvec = cons.GMs;
 for i=2:9
     GMvec(i)          = cspice_bodvrd( [num2str(i-1) ], 'GM', 1);

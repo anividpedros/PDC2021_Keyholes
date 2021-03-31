@@ -210,6 +210,32 @@ longp = atan2(state_eat(2),state_eat(1));
 kepE_sma = kep_eat';
 kepE_sma(1) = kep_eat(1)/(1-kep_eat(2));
 
+% Secular Propagation
+kep_planet = NaN(8,8);
+GMvec = cons.GMs;
+for i = 2:9
+    GMvec(i)          = cspice_bodvrd( num2str(i-1), 'GM', 1);
+    state_planet      = cspice_spkezr( num2str(i-1),  eti, 'ECLIPJ2000', 'NONE', '10' );
+    kep_planet(:,i-1) = cspice_oscelt( state_planet, eti, cons.GMs );
+end
+kep_planet(:,3) = kep_eat ;
+GMvec(3) = cons.GMe;
+
+% Secular Model: Lagrange-Laplace
+kepJ_sma = kep_planet(:,5);
+kepJ_sma(1) = kepJ_sma(1)/(1-kepJ_sma(2));
+
+cons_sec.OEp = kepJ_sma';
+cons_sec.GMp = GMvec(6);
+cons_sec.GMs = GMvec(1);
+
+secular_model_LL = secular_model_10BP_s2(kep0_sma, cons_sec, 1);
+
+kept = kep0_sma;
+
+
+
+
 for i=1:nr
     
     % New circles
@@ -219,7 +245,7 @@ for i=1:nr
     R = circles(i,4)/cons.Re;    
     
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-        two_keyholes_dxi(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma);
+        two_keyholes_dxi_sec(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,secular_model_LL,cons_sec);
     
     cc = co(k,:);    
     plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
