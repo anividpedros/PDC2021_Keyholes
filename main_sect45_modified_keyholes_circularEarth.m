@@ -5,7 +5,7 @@ clear
 close all
 format shortG
 
-filename = 'main_sect45_modified_keyholes.m';
+filename = 'main_sect45_modified_keyholes_circularEarth.m';
 filepath = matlab.desktop.editor.getActiveFilename;
 currPath = filepath(1:(end-length(filename)));
 cd(currPath)
@@ -44,18 +44,23 @@ cons.Day = 3600*24;
 
 state_eat = cspice_spkezr( '399', et, 'ECLIPJ2000', 'NONE', '10' );
 kep_eat = cspice_oscelt( state_eat, et, cons.GMs );
-sma_eat = kep_eat(1)/(1-kep_eat(2));
 
 state_ast = cspice_spkezr( ast_id, et, 'ECLIPJ2000', 'NONE', '10' );
 kep_ast = cspice_oscelt( state_ast, et, cons.GMs );
 sma_ast = kep_ast(1)/(1-kep_ast(2));
 
-%% Generate states moments before the flyby
-cons.yr = 2*pi/sqrt(cons.GMs/sma_eat^3);
+%% 2. Modify elements for encounter with simpler Earth model
+% Make Earth Circular-Ecliptic -----
+kep_eat(2:3) = 0;
+cons.yr = 2*pi/sqrt(cons.GMs/kep_eat(1)^3);
 
-kep_ast(6) = kep_ast(6)-0.002; % Adjust timing for very close flyby
+% Modify NEO to try to make dCA smaller ----
+kep_ast(3) = kep_ast(3)+.0;     % Increase inclination
+kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
+kep_ast(6) = kep_ast(6)-0.0111; % Adjust timing for very close flyby
 
-dt = 24*.715*3600;
+% Generate states moments before the flyby
+dt = -4*24 * 3600;
 t0 = et + dt;
 
 state_ast = cspice_conics(kep_ast, t0);
@@ -209,7 +214,8 @@ ylabel('\zeta (R_\oplus)');
 
 plot( xi/sc, zeta/sc, '+k' )
 
-%% General Keyholes Computation
+
+%% General Keyholes computation
 % Section dependencies: scripts in 'keyholes'
 RE_au = cons.Re/DU;
 
@@ -217,6 +223,7 @@ m  = cons.GMe/cons.GMs ;
 circles = circ;
 
 F = figure(3);
+subplot(1,2,2)
 hold on
 
 sc = cons.Re/DU;
@@ -233,21 +240,11 @@ for i=1:nr
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
         two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
     
-    subplot(1,2,1)
     cc = co(k,:);    
     plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
         'Color',cc,'LineStyle','--');
-    pl1 = plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
+    pl = plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
          'Color',cc,'LineStyle','--');
-    hold on
-    
-    subplot(1,2,2)
-    cc = co(k,:);    
-    plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
-        'Color',cc,'LineStyle','--');
-    pl2 = plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
-         'Color',cc,'LineStyle','--');
-    hold on
      
     % Register keyholes with solutions
 %     arcexist = sum(~isnan(kh_up_xi)) + sum(~isnan(kh_down_xi));
@@ -265,15 +262,10 @@ for i=1:nr
     end
     
     if i==1
-        h_list1(1) = pl1(1);
-        h_list2(1) = pl2(1);
+        h_list(1) = pl(1);
     end
     
 end
-
-
-for z = 1:2
-    subplot(1,2,z)
 colormap(co);
 fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
 plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
@@ -287,9 +279,11 @@ cb.Label.String = 'k';
 axis([-1 1 -1 1]*10)
 xlabel('\xi (R_\oplus)');
 ylabel('\zeta (R_\oplus)');
-end
 
-%% MODIFIED Keyholes Computation
+
+
+
+%% MOIDIFIED Keyholes Computation
 % Section dependencies: scripts in 'keyholes'
 RE_au = cons.Re/DU;
 
@@ -297,7 +291,6 @@ m  = cons.GMe/cons.GMs ;
 circles = circ;
 
 F = figure(3);
-
 hold on
 
 sc = cons.Re/DU;
@@ -314,6 +307,7 @@ kepE_sma(1) = kep_eat(1)/(1-kep_eat(2));
 et0 = t0 + dt_per;
 eti = et0 + 30*86400 ; % Initial ephemeris time for integration
 
+subplot(1,2,2)
 
 % Secular Propagation
 kep_planet = NaN(8,8);
@@ -334,7 +328,6 @@ cons_sec.OEp = kepJ_sma';
 cons_sec.GMp = GMvec(6);
 cons_sec.GMs = GMvec(1);
 
-
 % Numerical Model Inputs
 cons_ode.t0        = eti ;
 cons_ode.GM_vec    = GMvec ; % 1st element is Sun
@@ -354,65 +347,58 @@ for i=1:nr
         two_keyholes_dxi_sec(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_sec);
 %     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
 %           two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
-%     catch
-%         
+%     catch        
 %     end
-    subplot(1,2,1)
-    cc = co(k,:);    
-    plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
-        'Color',cc,'LineWidth',1);
-    pl1 = plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
-         'Color',cc,'LineWidth',1);
 
-    % Register keyholes with solutions
-    arcexist = sum(~isnan(kh_up_xi)) + sum(~isnan(kh_down_xi));
-    if arcexist
-%         kh_good = [kh_good; i];
-        fprintf('Keyhole %g SEC exists\n',i)
-    end 
-     
-    % Numerical
-    subplot(1,2,2)
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
         two_keyholes_dxi_num(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_ode);
-    
-    cc = co(k,:);    
-    plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
-        'Color',cc,'LineWidth',1);
-    pl2 = plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
-         'Color',cc,'LineWidth',1);
-    
 
-    % Register keyholes with solutions
-    arcexist = sum(~isnan(kh_up_xi)) + sum(~isnan(kh_down_xi));
-    if arcexist
-        kh_good = [kh_good; i];
-        fprintf('Keyhole %g NUM exists\n',i)
+    if sum(~isnan(kh_up_xi(:)))
+        fprintf('Keyhole %g found!\n',i)
     end
     
-    if i==1
-        h_list1(2) = pl1(1);
-        h_list1(2) = pl2(1);
+    subplot(1,2,1)
+    cc = co(k,:);    
+%     cc = [0 1 1];
+%     cc = [1 0 0];
+    plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
+        'Color',cc,'LineWidth',1);
+    pl = plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
+         'Color',cc,'LineWidth',1);
+    
+%     drawnow 
+    % Register keyholes with solutions
+%     arcexist = sum(~isnan(kh_up_xi)) + sum(~isnan(kh_down_xi));
+    R1 = sqrt(sum(kh_down_xi.^2 + kh_down_zeta.^2,2));
+    R2 = sqrt(sum(kh_up_xi.^2 + kh_up_zeta.^2,2));
+    arcexist = sum( (R1-RE_au*focus_factor)>0 ) + sum( (R2-RE_au*focus_factor)>0 );
+    
+    arcexist = sum( kh_up_zeta > 2*RE_au*focus_factor );
+%     arcexist = sum( kh_down_zeta < -1.6*RE_au );
+    
+    if arcexist
+        kh_good = [kh_good; i];
+        fprintf('Keyhole num %g exists\n',i)
+    end
+    
+    if length(kh_good) == 1
+        h_list(2) = pl(1);
     end
     
 end
+colormap(co);
+fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
+plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
+plot(cos(thv), sin(thv),'k--');
 
+legend(h_list,{'post-enc','sec-LL'})
 
-% colormap(co);
-% fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
-% plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
-% plot(cos(thv), sin(thv),'k--');
-
-for z=1:2
-    subplot(1,2,z)
+%%
 grid on
 axis equal
 caxis([1 20])
 cb = colorbar;
 cb.Label.String = 'k';
-cb.Units = 'inches';
-cb.Position(3:4) = [0.12 1.5];
 axis([-1 1 -1 1]*5)
 xlabel('\xi (R_\oplus)');
 ylabel('\zeta (R_\oplus)');
-end

@@ -199,7 +199,7 @@ for k=1:kmax
 end
 
 % Plot Valsecchi circles!
-F  = figure(2);
+F  = figure(2); clf;
 
 nr = size(circ,1);
 co = winter(22);
@@ -214,6 +214,10 @@ for i=1:nr
     k = circ(i,1);
     D = circ(i,3);    
     R = circ(i,4);
+    
+    if i==149 % Ignore the 1e7 one
+        continue
+    end
     
     xi_circ   = R*cos(thv);
     zeta_circ = D + R*sin(thv);
@@ -248,7 +252,7 @@ RE_au = cons.Re/DU;
 m  = cons.GMe/cons.GMs ;
 circles = circ;
 
-F = figure(3);
+F = figure(30);
 hold on
 
 sc = cons.Re/DU;
@@ -318,7 +322,7 @@ R = circles(ic,4)/cons.Re;
     two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
 
 % Plot selected keyhole
-figure(2)
+figure(30)
 cc = [1 0 0];
 sc = cons.Re/DU;
 

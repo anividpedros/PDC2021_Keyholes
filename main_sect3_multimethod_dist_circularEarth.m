@@ -88,7 +88,7 @@ kep_eat(2:3) = 0;
 cons.yr = 2*pi/sqrt(cons.GMs/kep_eat(1)^3);
 
 % Modify NEO to try to make dCA smaller ----
-kep_ast(3) = kep_ast(3)+.2;     % Increase inclination
+kep_ast(3) = kep_ast(3)+.0;     % Increase inclination
 kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
 kep_ast(6) = kep_ast(6)-0.0111; % Adjust timing for very close flyby
 
@@ -297,10 +297,10 @@ for i=1:nr
 %     arcexist = sum(~isnan(kh_up_xi)) + sum(~isnan(kh_down_xi));
     R1 = sqrt(sum(kh_down_xi.^2 + kh_down_zeta.^2,2));
     R2 = sqrt(sum(kh_up_xi.^2 + kh_up_zeta.^2,2));
-    arcexist = sum( (R1-RE_au*focus_factor)>0 ) + sum( (R2-RE_au*focus_factor)>0 );
+    arcexist = sum( (R1-3*RE_au*focus_factor)>0 ) + sum( (R2-3*RE_au*focus_factor)>0 );
     
-    arcexist = sum( kh_up_zeta > 2*RE_au*focus_factor );
-    arcexist = sum( kh_down_zeta < -5*RE_au );
+%     arcexist = sum( kh_up_zeta > 2*RE_au*focus_factor );
+%     arcexist = sum( kh_down_zeta < -5*RE_au );
 %     arcexist = sum( kh_up_zeta > 3.6*RE_au );
     
     if arcexist
@@ -329,12 +329,19 @@ ylabel('\zeta (R_\oplus)');
 % Pick flyby from the keyholes and generate ICs
 
 % Manually select k
-ic = 86 ;
+tf = 20;
+
+for i=1%:66
+    
+ic = kh_good(i) ;
+ic = 31;
 
 k = circles(ic,1);
 h = circles(ic,2);
 D = circles(ic,3)/cons.Re;
 R = circles(ic,4)/cons.Re;
+
+fprintf('Keyhole number %g\n',ic)
 
 [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
     two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
@@ -349,24 +356,35 @@ plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2
 plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
     'Color',cc);
 
+if sign(D) > 0
+    
 % 1. Find a point close to xi=0 (arbitrary choice)
 [~,ik] = min( abs(kh_up_xi) );
 xi0   = kh_up_xi(ik(1));
 zeta0 = kh_up_zeta(ik(1));
 
-% [~,ik] = min( abs(kh_down_xi) );
-% xi0   = kh_down_xi(ik(1));
-% zeta0 = kh_down_zeta(ik(1));
-
-% 2. Find the first point of the keyhole arc (arbirary as well)
-%--- Select depending on the arch being up or down
-% ik = find( ~isnan(kh_up_xi),1, 'last' ); 
+% % 2. Find the first point of the keyhole arc (arbirary as well)
+% ik = find( ~isnan(kh_up_xi),1, 'first' ); 
 % xi0   = kh_up_xi(ik);
 % zeta0 = kh_up_zeta(ik);
 
-ik = find( ~isnan(kh_down_xi), 1 ); 
-xi0   = kh_down_xi(ik);
-zeta0 = kh_down_zeta(ik);
+else
+
+[~,ik] = min( abs(kh_down_xi) );
+xi0   = kh_down_xi(ik(1));
+zeta0 = kh_down_zeta(ik(1));
+    
+% % 2. Find the first point of the keyhole arc (arbirary as well)
+% ik = find( ~isnan(kh_down_xi), 1 ); 
+% xi0   = kh_down_xi(ik);
+% zeta0 = kh_down_zeta(ik);
+
+end
+
+% Choose a point outside of the keyhole
+% theta_pick = 30 *pi/180;
+% xi0    = R*cos(theta_pick)*sc;
+% zeta0  = (D + R*sin(theta_pick))*sc;
 
 auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp];
 r0   = auxR'*[xi0; 0; zeta0];
@@ -420,7 +438,7 @@ kep_opik_post(7:8) = [t0 + dt_per;
 % 8. Plotting: distance over time with heliocentric elements
 
 % Post-encounter constant elements distance
-tv1 = (-0.1:.001:20) *cons.yr;
+tv1 = ((-0.1:.001:tf) + 0) *cons.yr;
 et0 = t0 + dt_per;
 
 d_pe = zeros(length(tv1),1);
@@ -443,7 +461,7 @@ MOID0 = MOID_SDG_win( kep0_sma([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
 % Numerical Integration of point
 eti = et0 + 30*86400 ; % Initial ephemeris time for integration
 X0  = cspice_conics(kep_opik_post, eti );
-tv  = ( 0:0.001:20 )*cons.yr;
+tv  = ( 0:0.001:tf )*cons.yr;
 
 GMvec = cons.GMs;
 for i=2:9
@@ -553,6 +571,9 @@ ylabel('MOID R_\oplus)')%(DU)');
 
 legend('post-enc','n3BPert','sec-LL')%,'4BP')
 xlim(tv1([1 end])/xsc)
+
+
+end
 
 %% Auxiliar Functions
 

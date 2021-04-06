@@ -29,9 +29,9 @@ addpath(genpath(pwd))
 dir_local_de431 = 'C:\Users\Oscar\Documents\Spice-Kernels\';
 % dir_local_de431 = '2nd Author write here your directory';
 
-cspice_furnsh( 'naif0012.tls.pc' )
-cspice_furnsh( 'gm_de431.tpc' )
-cspice_furnsh( 'pck00010.tpc' )
+cspice_furnsh( 'SPICEfiles/naif0012.tls.pc' )
+cspice_furnsh( 'SPICEfiles/gm_de431.tpc' )
+cspice_furnsh( 'SPICEfiles/pck00010.tpc' )
 cspice_furnsh( [dir_local_de431 'de431_part-1.bsp'] )
 cspice_furnsh( [dir_local_de431 'de431_part-2.bsp'] )
 
@@ -64,7 +64,7 @@ kep_eat(2:3) = 0;
 cons.yr = 2*pi/sqrt(cons.GMs/kep_eat(1)^3);
 
 % Modify NEO to try to make dCA smaller ----
-kep_ast(3) = kep_ast(3)+.2;     % Increase inclination
+kep_ast(3) = kep_ast(3)+.0;     % Increase inclination
 kep_ast(5) = kep_ast(5)+.06;    % Adjust arg of perihelion to low MOID
 kep_ast(6) = kep_ast(6)-0.0111; % Adjust timing for very close flyby
 
@@ -88,7 +88,7 @@ MA_per = 0;
 
 a_ast_O = kep_ast_O(1)/(1 - kep_ast_O(2));
 n_ast_O = sqrt( -cons.GMe/a_ast_O(1)^3 );
-dt_per  = (MA_per - kep_ast_O(6))/n_ast_O;
+dt_per  = (MA_per - kep_ast_O(6))/n_ast_O; dt_per_day = dt_per/86400
 
 
 %% 4. Using ephemeris at date of perigee, obtain MTP coordinates
@@ -129,7 +129,7 @@ U_nd = U/(DU/TU);
 m = cons.GMe/cons.GMs;
 
 % Rescaling b-plane coordinates: Angular momentum conservation
-b    = (V/U)*b_p  ;
+b    = (V/U)*b_p ; b_RE = b/cons.Re
 xi   = (V/U)*xi_p ;
 zeta = (V/U)*zeta_p ;
  
@@ -151,7 +151,7 @@ auxR = [cp 0 -sp;st*sp ct st*cp;ct*sp -st ct*cp];
 % xi_nd   = xi/DU;
 % zeta_nd = zeta/DU;
 % b_nd = sqrt(xi_nd^2 + zeta_nd^2);
-b_nd = b/DU;
+b_nd = b/DU; 
 c_nd = (cons.GMe/cons.GMs)/U_nd^2;
 
 b2 = b_nd*b_nd;
@@ -198,6 +198,7 @@ end
 
 % Plot Valsecchi circles!
 F  = figure(2);
+subplot(1,2,1);
 
 nr = size(circ,1);
 co = winter(22);
@@ -236,7 +237,7 @@ axis([-1 1 -1 1]*15)
 xlabel('\xi (R_\oplus)');
 ylabel('\zeta (R_\oplus)');
 
-plot( xi/sc, zeta/sc, '+k' )
+% plot( xi/sc, zeta/sc, '+k' )
 
 
 %% General Keyholes computation
@@ -246,7 +247,8 @@ RE_au = cons.Re/DU;
 m  = cons.GMe/cons.GMs ;
 circles = circ;
 
-F = figure(3);
+F = figure(2);
+subplot(1,2,2);
 hold on
 
 sc = cons.Re/DU;
@@ -274,6 +276,8 @@ for i=1:nr
     R1 = sqrt(sum(kh_down_xi.^2 + kh_down_zeta.^2,2));
     R2 = sqrt(sum(kh_up_xi.^2 + kh_up_zeta.^2,2));
     arcexist = sum( (R1-RE_au*focus_factor)>0 ) + sum( (R2-RE_au*focus_factor)>0 );
+    arcexist = sum( kh_up_zeta > 4*RE_au );
+    
     if arcexist
         kh_good = [kh_good; i];
         fprintf('Keyhole num %g exists\n',i)
@@ -299,18 +303,19 @@ ylabel('\zeta (R_\oplus)');
 %% Keyhole selection
 % Pick flyby from the keyholes and generate ICs
 
-% Manually select k
-kref = 15;
-ic = find( circles(:,1) == kref, 1 ) + 3;
-% Max radius from keyholes found
-[~,id] = max(abs(circles(kh_good,:)));
-ic = kh_good(id(3));
-% Finding circles with large radius list
-[~,id] = sort(abs(circles(kh_good,3)),'descend');
-ic = kh_good(49);
-% Final decision
-ic = 124;
-ic = 32; % kh_good(7);
+% % Manually select k
+% kref = 15;
+% ic = find( circles(:,1) == kref, 1 ) + 3;
+% % Max radius from keyholes found
+% [~,id] = max(abs(circles(kh_good,:)));
+% ic = kh_good(id(3));
+% % Finding circles with large radius list
+% [~,id] = sort(abs(circles(kh_good,3)),'descend');
+% ic = kh_good(49);
+% % Final decision
+% ic = 124;
+% ic = 32; % kh_good(7);
+ic = kh_good(5);
 
 k = circles(ic,1);
 h = circles(ic,2);
