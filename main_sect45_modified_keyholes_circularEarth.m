@@ -223,7 +223,7 @@ m  = cons.GMe/cons.GMs ;
 circles = circ;
 
 F = figure(3);
-subplot(1,2,2)
+subplot(1,2,1)
 hold on
 
 sc = cons.Re/DU;
@@ -307,7 +307,7 @@ kepE_sma(1) = kep_eat(1)/(1-kep_eat(2));
 et0 = t0 + dt_per;
 eti = et0 + 30*86400 ; % Initial ephemeris time for integration
 
-subplot(1,2,2)
+subplot(1,2,1)
 
 % Secular Propagation
 kep_planet = NaN(8,8);
@@ -350,8 +350,8 @@ for i=1:nr
 %     catch        
 %     end
 
-    [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-        two_keyholes_dxi_num(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_ode);
+%     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+%         two_keyholes_dxi_num(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_ode);
 
     if sum(~isnan(kh_up_xi(:)))
         fprintf('Keyhole %g found!\n',i)

@@ -1,4 +1,4 @@
-function [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = two_keyholes_dxi_sec(k,h,D,R,U,theta,phi,m,t0,DU,longp,ap,cons, kepE_sma,cons_ode)
+function [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta,dx_down,dx_up] = two_keyholes_dxi_sec(k,h,D,R,U,theta,phi,m,t0,DU,longp,ap,cons, kepE_sma,cons_ode)
 %% COMPUTE KEYHOLES FOR A GIVEN RESONANCE
 
 % Convert to dimensionless units (au, but here we use the real distance of
@@ -20,7 +20,7 @@ c = m/U^2;
 bEarth_au = RE_au*sqrt(1 + 2*c/RE_au);
 
 % Get xi, zeta for the previous ranges of alpha
-nkh = 20;
+nkh = 50;
 [xi_up,zeta_up] = res_circle(linspace(0,pi,nkh),D_au,R_au);
 [xi_down,zeta_down] = res_circle(linspace(-pi,0,nkh),D_au,R_au);
 
@@ -29,6 +29,7 @@ nkh = 20;
 % Keyhole - bottom
 zeta_edges = nan(nkh,2);
 xi_edges = nan(nkh,2);
+dx_down = nan(nkh,1);
 for i = 1:nkh
     
     xi = xi_down(i);
@@ -69,6 +70,7 @@ for i = 1:nkh
     moid1 = MOID_ORCCA_win( K2S(kepE_sma,AU), K2S(kep0_nbp,AU) );
 
     dx = moid1 - moid0;
+    dx_down(i) = dx;
 %------------------------
     
     if (abs(xi1 + dx) > bEarth_au)
@@ -108,6 +110,7 @@ kh_down_zeta = zeta_edges;
 % Keyhole - top
 zeta_edges = nan(nkh,2);
 xi_edges = nan(nkh,2);
+dx_up = nan(nkh,1);
 for i = 1:nkh
     
     xi = xi_up(i);
@@ -147,7 +150,7 @@ for i = 1:nkh
     moid1 = MOID_ORCCA_win( K2S(kepE_sma,AU), K2S(kep0_nbp,AU) );
 
     dx = moid1 - moid0;
-    
+    dx_up(i) = dx;
     if (abs(xi1 + dx) > bEarth_au)
         zeta_edges(i,:) = NaN;
         xi_edges(i,:)   = NaN;

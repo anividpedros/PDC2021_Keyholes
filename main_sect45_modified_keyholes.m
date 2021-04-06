@@ -233,13 +233,13 @@ for i=1:nr
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
         two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
     
-    subplot(1,2,1)
-    cc = co(k,:);    
-    plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
-        'Color',cc,'LineStyle','--');
-    pl1 = plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
-         'Color',cc,'LineStyle','--');
-    hold on
+%     subplot(1,2,1)
+%     cc = co(k,:);    
+%     plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
+%         'Color',cc,'LineStyle','--');
+%     pl1 = plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
+%          'Color',cc,'LineStyle','--');
+%     hold on
     
     subplot(1,2,2)
     cc = co(k,:);    
@@ -265,14 +265,14 @@ for i=1:nr
     end
     
     if i==1
-        h_list1(1) = pl1(1);
+%         h_list1(1) = pl1(1);
         h_list2(1) = pl2(1);
     end
     
 end
 
 
-for z = 1:2
+for z = 2%1:2
     subplot(1,2,z)
 colormap(co);
 fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
@@ -341,7 +341,7 @@ cons_ode.GM_vec    = GMvec ; % 1st element is Sun
 cons_ode.IC_planet = kep_planet ; % 1 column per planet
 
 
-for i=1:nr
+for i=150:nr
     
     % New circles
     k = circles(i,1);
@@ -349,27 +349,27 @@ for i=1:nr
     D = circles(i,3)/cons.Re;    
     R = circles(i,4)/cons.Re;    
     
-%     try
-    [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-        two_keyholes_dxi_sec(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_sec);
+% %     try
 %     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-%           two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
-%     catch
-%         
-%     end
-    subplot(1,2,1)
-    cc = co(k,:);    
-    plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
-        'Color',cc,'LineWidth',1);
-    pl1 = plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
-         'Color',cc,'LineWidth',1);
-
-    % Register keyholes with solutions
-    arcexist = sum(~isnan(kh_up_xi)) + sum(~isnan(kh_down_xi));
-    if arcexist
-%         kh_good = [kh_good; i];
-        fprintf('Keyhole %g SEC exists\n',i)
-    end 
+%         two_keyholes_dxi_sec(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_sec);
+% %     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+% %           two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
+% %     catch
+% %         
+% %     end
+%     subplot(1,2,2)
+%     cc = co(k,:);    
+%     plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
+%         'Color',cc,'LineWidth',1);
+%     pl1 = plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
+%          'Color',cc,'LineWidth',1);
+% 
+%     % Register keyholes with solutions
+%     arcexist = sum(~isnan(kh_up_xi)) + sum(~isnan(kh_down_xi));
+%     if arcexist
+% %         kh_good = [kh_good; i];
+%         fprintf('Keyhole %g SEC exists\n',i)
+%     end 
      
     % Numerical
     subplot(1,2,2)
@@ -391,7 +391,7 @@ for i=1:nr
     end
     
     if i==1
-        h_list1(2) = pl1(1);
+%         h_list1(2) = pl1(1);
         h_list1(2) = pl2(1);
     end
     
@@ -403,7 +403,7 @@ end
 % plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
 % plot(cos(thv), sin(thv),'k--');
 
-for z=1:2
+for z=2%:2
     subplot(1,2,z)
 grid on
 axis equal

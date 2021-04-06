@@ -1,4 +1,4 @@
-function [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = two_keyholes_dxi_sec(k,h,D,R,U,theta,phi,m,t0,DU,longp,ap,cons, kepE_sma,cons_sec)
+function [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta,dx_down,dx_up] = two_keyholes_dxi_sec(k,h,D,R,U,theta,phi,m,t0,DU,longp,ap,cons, kepE_sma,cons_sec)
 %% COMPUTE KEYHOLES FOR A GIVEN RESONANCE
 
 % Convert to dimensionless units (au, but here we use the real distance of
@@ -26,6 +26,7 @@ nkh = 100;
 % Keyhole - bottom
 zeta_edges = nan(nkh,2);
 xi_edges = nan(nkh,2);
+dx_down  = nan(nkh,1);
 for i = 1:nkh
     
     xi = xi_down(i);
@@ -41,7 +42,9 @@ for i = 1:nkh
     [~,theta1,phi1,xi1,zeta1,~] = opik_next(U,theta,phi,xi,zeta,t0,h,m);
     % Post-Encounter Heliocentric Orbit Elements
     kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U,phi,longp,ap)';
-    
+    if ~isreal(kep_opik_post)
+        continue
+    end    
     kep_opik_post(1) = kep_opik_post(1)*(1-kep_opik_post(2))*DU ; % 'opik_bplane_2_oe.m' function returns sma in first element
     kep_opik_post(6) = TA_2_MA(kep_opik_post(6),kep_opik_post(2));% 'opik_bplane_2_oe.m' function returns true anomaly 6th element
     % !!!!!!! INPUT EPHEMERIS TIME IF NEEDED FOR NUM
@@ -61,6 +64,8 @@ for i = 1:nkh
     moid1 = MOID_ORCCA_win( K2S(kepE_sma,AU), K2S(kep0_LL_t,AU));
 
     dx = moid1 - moid0;
+    dx_down(i) = dx;
+    
 %     dx = 0;
 %------------------------
     
@@ -101,6 +106,7 @@ kh_down_zeta = zeta_edges;
 % Keyhole - top
 zeta_edges = nan(nkh,2);
 xi_edges = nan(nkh,2);
+dx_up    = nan(nkh,1);
 for i = 1:nkh
     
     xi = xi_up(i);
@@ -115,6 +121,9 @@ for i = 1:nkh
     [~,theta1,phi1,xi1,zeta1,~] = opik_next(U,theta,phi,xi,zeta,t0,h,m);
     % Post-Encounter Heliocentric Orbit Elements
     kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U,phi,longp,ap)';
+    if ~isreal(kep_opik_post)
+        continue
+    end   
     
     kep_opik_post(1) = kep_opik_post(1)*(1-kep_opik_post(2))*DU ; % 'opik_bplane_2_oe.m' function returns sma in first element
     kep_opik_post(6) = TA_2_MA(kep_opik_post(6),kep_opik_post(2));% 'opik_bplane_2_oe.m' function returns true anomaly 6th element
@@ -135,6 +144,7 @@ for i = 1:nkh
     moid1 = MOID_ORCCA_win( K2S(kepE_sma,AU), K2S(kep0_LL_t,AU));
 
     dx = moid1 - moid0;
+    dx_up(i) = dx;
 %     dx = 0;
     
     if (abs(xi1 + dx) > bEarth_au)
@@ -174,7 +184,7 @@ for i = 1:nkh
     dz2dz = dzeta2dzeta(U,theta,phi,xi,zeta0,m,h,theta1,phi1,xi1,zeta1);
     zeta_edges(i,:) = zeta0 + zeta2_edges/dz2dz;
     xi_edges(i,:) = [xi,xi];
-
+    
 end
 kh_up_xi = xi_edges;
 kh_up_zeta = zeta_edges;
