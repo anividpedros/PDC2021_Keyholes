@@ -482,7 +482,7 @@ scatter( xi_down, zeta_down, 20, dx_cm, 'filled' )
 colormap(cm)
 caxis(scc*cons.AU/cons.Re)
 cb.Label.String = '\Delta \xi (R_\oplus)';
-txt = text(-0.5,11,'k=7');
+txt = text(-0.5,11,['k=' num2str(k)]);
 axis([-10 10 -5 15]);
 
 title('\Delta\xi - n3BPert')
