@@ -1,52 +1,50 @@
-# CompilerName=msvc150
+# CompilerName=clang
 # Mode=optim
 ninja_required_version = 1.3
 
 # Basic folders
 root = .
-builddir = $root\build\win64
-matlabdir = C:\Program Files\MATLAB\R2020a
-startdir = C:\Users\Oscar\Documents\GitHub\PDC2021_Keyholes\MOIDroutines\MOID_ORCCA
+builddir = $root/build/maci64
+matlabdir = /Applications/MATLAB_R2020a.app
+startdir = /Users/anivid/Documents/Research/PDC2021_Keyholes/MOIDroutines/MOID_ORCCA
 
 # Toolchain information
-cc = cl
-cxx = cl
-linker = link
-linkerxx = link
+cc = /usr/bin/xcrun -sdk macosx10.14.1 clang
+cxx = /usr/bin/xcrun -sdk macosx10.14.1 clang++
+linker = /usr/bin/xcrun -sdk macosx10.14.1 clang
+linkerxx = /usr/bin/xcrun -sdk macosx10.14.1 clang++
 
-cflags =  /c /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /I "$root" /I "$startdir" /I "$root\interface" /I "$matlabdir\extern\include" /I "." -DMODEL=ComputeMOID_mex_win  
+cflags =  -fno-common -arch x86_64 -mmacosx-version-min=10.9 -fexceptions -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk -DMATLAB_MEX_FILE -O2 -fwrapv -DNDEBUG -std=c99 -I "$root" -I "$startdir" -I "$root/interface" -I "$matlabdir/extern/include" -I "." -DMODEL=ComputeMOID_mex_MAC -c 
 
-cxxflags =   /c /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /I "$root" /I "$startdir" /I "$root\interface" /I "$matlabdir\extern\include" /I "." -DMODEL=ComputeMOID_mex_win  
+cxxflags =  -fno-common -arch x86_64 -mmacosx-version-min=10.9 -fexceptions -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk -fobjc-arc -std=c++11 -stdlib=libc++ -DMATLAB_MEX_FILE -O2 -fwrapv -DNDEBUG -std=c++11 -I "$root" -I "$startdir" -I "$root/interface" -I "$matlabdir/extern/include" -I "." -DMODEL=ComputeMOID_mex_MAC -c 
 
-ldflags =  /nologo /manifest   /DLL /LIBPATH:"$matlabdir\extern\lib\win64\microsoft" libmx.lib libmex.lib libmat.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib  /out:"ComputeMOID_mex_win.mexw64" libemlrt.lib libcovrt.lib libut.lib libmwmathutil.lib  /export:mexFunction /export:mexfilerequiredapiversion /export:emlrtMexFcnProperties /export:ComputeMOID_initialize /export:ComputeMOID_terminate /export:ComputeMOID_atexit /export:ComputeMOID
+ldflags =  -Wl,-twolevel_namespace -undefined error -arch x86_64 -mmacosx-version-min=10.9 -Wl,-syslibroot,/Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk -bundle   -L"$matlabdir/bin/maci64" -lmx -lmex -lmat -lc++  -Wl,-rpath,@loader_path -o ComputeMOID_mex_MAC.mexmaci64 -lemlrt -lcovrt -lut -lmwmathutil  -Wl,-exported_symbols_list,ComputeMOID_mex_MAC.map
 
 # Build Rules
 rule cc
-    command = $cc $cflags $in /Fo$out
+    command = $cc $cflags $in -o $out
 
 rule cxx
-    command = $cxx $cxxflags $in /Fo$out
+    command = $cxx $cxxflags $in -o $out
 
 rule link
-    command = $linker @$out.rsp $ldflags
-    rspfile = $out.rsp
-    rspfile_content = $in
+    command = $linker $in $ldflags
 
 rule linkxx
     command = $linkerxx $in $ldflags
 
 # Build
-build $builddir\rt_nonfinite.obj : cc $root\rt_nonfinite.c
-build $builddir\ComputeMOID_data.obj : cc $root\ComputeMOID_data.c
-build $builddir\ComputeMOID_initialize.obj : cc $root\ComputeMOID_initialize.c
-build $builddir\ComputeMOID_terminate.obj : cc $root\ComputeMOID_terminate.c
-build $builddir\ComputeMOID.obj : cc $root\ComputeMOID.c
-build $builddir\RefFrame.obj : cc $root\RefFrame.c
-build $builddir\WaterProcedure.obj : cc $root\WaterProcedure.c
-build $builddir\_coder_ComputeMOID_api.obj : cc $root\interface\_coder_ComputeMOID_api.c
-build $builddir\_coder_ComputeMOID_mex.obj : cc $root\interface\_coder_ComputeMOID_mex.c
-build $builddir\_coder_ComputeMOID_info.obj : cc $root\interface\_coder_ComputeMOID_info.c
-build $builddir\c_mexapi_version.obj : cc $matlabdir\extern\version\c_mexapi_version.c
+build $builddir/rt_nonfinite.o : cc $root/rt_nonfinite.c
+build $builddir/ComputeMOID_data.o : cc $root/ComputeMOID_data.c
+build $builddir/ComputeMOID_initialize.o : cc $root/ComputeMOID_initialize.c
+build $builddir/ComputeMOID_terminate.o : cc $root/ComputeMOID_terminate.c
+build $builddir/ComputeMOID.o : cc $root/ComputeMOID.c
+build $builddir/RefFrame.o : cc $root/RefFrame.c
+build $builddir/WaterProcedure.o : cc $root/WaterProcedure.c
+build $builddir/_coder_ComputeMOID_api.o : cc $root/interface/_coder_ComputeMOID_api.c
+build $builddir/_coder_ComputeMOID_mex.o : cc $root/interface/_coder_ComputeMOID_mex.c
+build $builddir/_coder_ComputeMOID_info.o : cc $root/interface/_coder_ComputeMOID_info.c
+build $builddir/c_mexapi_version.o : cc $matlabdir/extern/version/c_mexapi_version.c
 
 # Link
-build $root\ComputeMOID_mex_win.mexw64 : link $builddir\rt_nonfinite.obj $builddir\ComputeMOID_data.obj $builddir\ComputeMOID_initialize.obj $builddir\ComputeMOID_terminate.obj $builddir\ComputeMOID.obj $builddir\RefFrame.obj $builddir\WaterProcedure.obj $builddir\_coder_ComputeMOID_api.obj $builddir\_coder_ComputeMOID_mex.obj $builddir\_coder_ComputeMOID_info.obj $builddir\c_mexapi_version.obj 
+build $root/ComputeMOID_mex_MAC.mexmaci64 : link $builddir/rt_nonfinite.o $builddir/ComputeMOID_data.o $builddir/ComputeMOID_initialize.o $builddir/ComputeMOID_terminate.o $builddir/ComputeMOID.o $builddir/RefFrame.o $builddir/WaterProcedure.o $builddir/_coder_ComputeMOID_api.o $builddir/_coder_ComputeMOID_mex.o $builddir/_coder_ComputeMOID_info.o $builddir/c_mexapi_version.o 
