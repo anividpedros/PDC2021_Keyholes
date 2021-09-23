@@ -44,8 +44,7 @@ cons.yr  = 365.25 * 24 * 3600 ;
 cons.Day = 3600*24; 
 
 
-%% From example 
-
+%% CASE 1999 AN10
 U  = 0.884 ;
 xi = 0.000246 ;
 theta = 105.3 *pi/180;
@@ -67,13 +66,15 @@ F = figure(1);
 plot( kep_opik_post(:,1), kep_opik_post(:,2), '.' )
 axis([1.35 1.55 0.5 0.6])
 grid on
+xlabel('a (au)')
+ylabel('e')
 
 figure(2)
 Per = 2*pi ./sqrt( cons.GMs./(kep_opik_post(:,1)*cons.AU).^3 ) ./cons.yr;
 plot( Per,zetav, '.' )
 grid on
-xlabel('\zeta pre')
-ylabel('\xi post')
+xlabel('\Per (yr)')
+ylabel('\zeta pre')
 
 figure(3)
 plot( zetav,xi1 )
@@ -83,18 +84,10 @@ ylabel('\xi post')
 
 
 %% Validate keyholes function
-
-% xi_nd   = xi/DU;
-% zeta_nd = zeta/DU;
-% b_nd = sqrt(xi_nd^2 + zeta_nd^2);
-% b_nd = b/DU;
 c_nd = (cons.GMe/cons.GMs)/U^2;
 
-% b2 = b_nd*b_nd;
 c2 = c_nd*c_nd;
 U2 = U*U;
-% aux1 = (b2+c2)*(1-U2);
-% aux2 = -2*U_nd*( (b2-c2)*ct + 2*c_nd*zeta_nd*st );
 
 st = sin(theta);
 ct = cos(theta);
@@ -166,7 +159,7 @@ for ic=1:nr
     R = circles(ic,4);
     
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-        two_keyholes(k, h, D/sc, R/sc, U, theta, phi, m,0,DU);
+        two_keyholes_Val03(k, h, D/sc, R/sc, U, theta, phi, m,0,DU);
 
     % cc = co(k,:);
     cc = [0 0 0];
@@ -175,3 +168,73 @@ for ic=1:nr
     plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
         'Color',cc);
 end
+
+
+%% CASE 1997 XF11
+U     = 0.459 ;
+theta = 84.0 *pi/180 ;
+phi   = 99.5 *pi/180 ;
+zetav = -.21:0.00005:.21 ;
+
+t0 = 0;
+h = 0;
+m  = cons.GMe/cons.GMs ;
+longp = 0;
+ap = 1;
+
+
+%% Potential Additional validation
+% - From heliocentric to Opik elements
+% - Check outgoing heliocentric if resonant encounter occurs
+%  ~ Final sma, ecc checked in the figure
+% - 
+
+
+%% From heliocentric to Opik elements
+TU = sqrt(DU^3/cons.GMs);
+% ast_id= '137108';
+% epoch = '2021 October 20 TDB';
+% epoch = '2027 August 7 TDB';
+% tv = (-24*5:.5:0.5) * 3600 ;
+
+load('Horizons-1999AN10.mat')
+thv = zeros(length(JDTDB),1);
+phv = thv;
+
+for i=1:length(JDTDB)
+    
+    % et = cspice_str2et( epoch ) + 24*.715*3600;
+    % et = cspice_str2et( epoch ) + tv(i);
+    et = cspice_str2et( ['JD' num2str(JDTDB(1))] );
+    
+    state_eat = cspice_spkezr( '399', et, 'ECLIPJ2000', 'NONE', '10' );
+    kep_eat = cspice_oscelt( state_eat, et, cons.GMs );
+    
+    state_ast = [X(i); Y(i); Z(i); VX(i); VY(i); VZ(i)];
+%     state_ast(1:3) = state_ast(1:3)*DU;
+%     state_ast(4:6) = state_ast(4:6)*(DU/(24*3600));
+%     state_ast = cspice_spkezr( ast_id, et, 'ECLIPJ2000', 'NONE', '10' );
+%     kep_ast = cspice_oscelt( state_ast, et, cons.GMs );
+    state_ast_t = HillRot(state_eat, state_ast);
+
+    rt(i)= norm( state_ast_t(1:3) );
+    V(i) = norm( state_ast_t(4:6) )/(DU/TU);
+    thv(i) = acos( state_ast_t(5)/V(i) );
+    phv(i) = atan2( state_ast_t(4), state_ast_t(6) );
+    
+end
+
+
+figure(12);
+subplot(2,1,1)
+plot( JDTDB/86400, thv*180/pi ); ylabel('\theta')
+grid on; hold on
+subplot(2,1,2)
+plot( JDTDB/86400, phv*180/pi ); ylabel('\phi')
+grid on; hold on
+
+figure(13)
+subplot(2,1,1)
+plot( JDTDB/86400, V )
+subplot(2,1,2)
+plot( JDTDB/86400, rt/cons.AU )
