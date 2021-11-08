@@ -474,6 +474,27 @@ xt = (tv + eti - et0)/cons.yr ;
 % Distance(t) Plot
 plot_distancevstime(6,cons,xt,tv1,d_pe)
 
+% Is the next encounter happening?
+F = figure(6);
+clf
+F.Position = [-1203 239 560 189];
+
+xsc = cons.yr;
+ysc = cons.AU; %cons.Re;
+
+plot(tv1/xsc, d_pe/ysc, 'b')
+grid on
+hold on
+xlabel('t (yr)')
+ylabel('d (au)')
+
+
+plot( xt, d_nbp/ysc, 'r' )
+
+plot( xt, d_ll/ysc, 'g')
+xlim(tv1([1 end])/xsc)
+legend('post-enc','n3BPert','sec-LL')
+
 % MOID(t) Plot
 plot_moidvstime(5,cons,MOID0,MOIDnbp,MOIDsec)
 
