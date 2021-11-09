@@ -200,7 +200,7 @@ for k=1:kmax
 end
 
 % Plot Valsecchi Circles
-plot_valsecchi_cirles(2,circ,cons) % first input, number of figure
+plot_valsecchi_circles(2,circ,cons) % first input, number of figure
 
 %% 2. General Keyholes computation
 % Section dependencies: scripts in 'keyholes'

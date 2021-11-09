@@ -1,8 +1,8 @@
-function plot_valsecchi_cirles(n,circ,cons)
+function plot_valsecchi_circles(n,circ,cons)
 
     % Plot Valsecchi circles!
     % n = number of figure
-x
+
     F  = figure(n);
 
     nr = size(circ,1);
