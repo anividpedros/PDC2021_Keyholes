@@ -31,15 +31,11 @@ addpath(genpath(pwd))
 
 %% 0. Initialization
 % 1. Read heliocentric elements
-dir_local_de431 = 'C:\Users\Oscar\Documents\Spice-Kernels\';
-% dir_local_de431 = '/Users/anivid/ExampleMICE/kernels/spk/';
-
-% addpath(genpath(mice_local_path))
 cspice_furnsh( 'SPICEfiles/naif0012.tls.pc' )
 cspice_furnsh( 'SPICEfiles/gm_de431.tpc' )
 cspice_furnsh( 'SPICEfiles/pck00010.tpc' )
-cspice_furnsh( [dir_local_de431 'de431_part-1.bsp'] )
-cspice_furnsh( [dir_local_de431 'de431_part-2.bsp'] )
+cspice_furnsh( 'SPICEfiles/de431_part-1.bsp' )
+cspice_furnsh( 'SPICEfiles/de431_part-2.bsp' )
 
 % 2021 PDC
 cspice_furnsh( 'SPICEfiles/2021_PDC-s11-merged-DE431.bsp' )
@@ -199,70 +195,13 @@ for k=1:kmax
     end
 end
 
+
 % Plot Valsecchi Circles
-plot_valsecchi_cirles(2,circ,cons,focus_factor) % first input, number of figure
+plot_valsecchi_circles(2,circ,cons,U,kmax,xi,zeta); % first input, number of figure
 
 %% 2. General Keyholes computation
 % Section dependencies: scripts in 'keyholes'
-RE_au = cons.Re/DU;
-
-m  = cons.GMe/cons.GMs ;
-circles = circ;
-
-F = figure(3);
-hold on
-
-sc = cons.Re/DU;
-nr = size(circles,1);
-kh_good = [];
-for i=1:nr
-    
-    % New circles
-    k = circles(i,1);
-    h = circles(i,2);
-    D = circles(i,3)/cons.Re;    
-    R = circles(i,4)/cons.Re;    
-    
-    [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-        two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
-    
-    cc = co(k,:);    
-    plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
-        'Color',cc);
-    plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
-         'Color',cc);
-     
-    % Register keyholes with solutions
-%     arcexist = sum(~isnan(kh_up_xi)) + sum(~isnan(kh_down_xi));
-    R1 = sqrt(sum(kh_down_xi.^2 + kh_down_zeta.^2,2));
-    R2 = sqrt(sum(kh_up_xi.^2 + kh_up_zeta.^2,2));
-    arcexist = sum( (R1-3*RE_au*focus_factor)>0 ) + sum( (R2-3*RE_au*focus_factor)>0 );
-    
-%     arcexist = sum( kh_up_zeta > 2*RE_au*focus_factor );
-%     arcexist = sum( kh_down_zeta < -5*RE_au );
-%     arcexist = sum( kh_up_zeta > 3.6*RE_au );
-    
-    if arcexist
-        kh_good = [kh_good; i];
-        fprintf('Keyhole num %g exists\n',i)
-    end
-    
-    
-end
-colormap(co);
-fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
-plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
-plot(cos(thv), sin(thv),'k--');
-
-grid on
-axis equal
-caxis([1 20])
-cb = colorbar;
-cb.Label.String = 'k';
-axis([-1 1 -1 1]*10)
-xlabel('\xi (R_\oplus)');
-ylabel('\zeta (R_\oplus)');
-
+[circles,kh_good] = keyhole_computation(3,circ,cons,U,DU,U_nd,theta,phi);
 
 %% 3. Keyhole selection: First paper figures
 % Pick flyby from the keyholes and generate ICs
@@ -394,8 +333,8 @@ kepE_sma(1) = kep_eat(1)/(1-kep_eat(2));
 kep0 = kep_opik_post;
 kep0_sma = kep_opik_post';
 kep0_sma(1) = kep0(1)/(1-kep0(2));
-MOID0 = MOID_SDG_win( kep0_sma([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
-
+% MOID0 = MOID_SDG_win( kep0_sma([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
+MOID0 = ComputeMOID(K2S(kep0_sma,cons.AU),K2S(kepE_sma,cons.AU));
 
 % Numerical Integration of point
 eti = et0 + 30*86400 ; % Initial ephemeris time for integration
@@ -420,18 +359,17 @@ options=odeset('RelTol',tol,'AbsTol',ones(1,6)*tol);
 [t,X]=ode113(@(t,X) NBP_propagator(t,X,cons_ode),tv,X0,options);
 
 % Postprocessing
-
-
 d_nbp   = zeros(length(tv),1);
 kep_nbp = zeros(length(tv),8);
 MOIDnbp = zeros(length(tv),1);
+
 for i = 1:length(tv)
     kep0_nbp     = cspice_oscelt( X(i,:)', eti+tv(i), cons.GMs );
     kep_nbp(i,:) = kep0_nbp;
     kep_nbp(i,1) = kep0_nbp(1)/(1-kep0_nbp(2));
    
-    MOIDnbp(i) = MOID_ORCCA_win( K2S(kepE_sma,cons.AU), K2S(kep_nbp(i,:),cons.AU) ) *cons.AU;
-    
+%     MOIDnbp(i) = MOID_ORCCA_win( K2S(kepE_sma,cons.AU), K2S(kep_nbp(i,:),cons.AU) ) *cons.AU;
+    MOIDnbp(i) = ComputeMOID( K2S(kep_nbp(i,:)), K2S(kepE_sma)  )*cons.AU;
     % Compute distance to Earth
     xe   = cspice_conics(kep_eat, eti+tv(i) );
     d_nbp(i) = norm(xe(1:3) - X(i,1:3)'); % From 4bp integration
@@ -453,6 +391,7 @@ kep_LL_t = zeros(length(tv),6);
 kept = kep0_sma;
 d_ll = zeros(length(tv),1);
 MOIDsec = d_ll;
+
 for i = 1:length(tv)
     
     [~, kep0_LL_t(i,:)] = drifted_oe_s2( secular_model_LL, tv(i), kep0_sma, kepJ_sma' );
@@ -463,7 +402,8 @@ for i = 1:length(tv)
     xe   = cspice_conics(kep_eat,  eti + tv(i) );
     d_ll(i) = norm(xe(1:3) - xa(1:3)); 
     
-    MOIDsec(i) = MOID_SDG_win( kep0_LL_t(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
+%     MOIDsec(i) = MOID_SDG_win( kep0_LL_t(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
+    MOIDsec(i) = ComputeMOID( K2S(kep_LL_t(i,:),cons.AU), K2S(kepE_sma,cons.AU) )*cons.AU;
     
 end
 
@@ -473,27 +413,6 @@ xt = (tv + eti - et0)/cons.yr ;
 
 % Distance(t) Plot
 plot_distancevstime(6,cons,xt,tv1,d_pe)
-
-% Is the next encounter happening?
-F = figure(6);
-clf
-F.Position = [-1203 239 560 189];
-
-xsc = cons.yr;
-ysc = cons.AU; %cons.Re;
-
-plot(tv1/xsc, d_pe/ysc, 'b')
-grid on
-hold on
-xlabel('t (yr)')
-ylabel('d (au)')
-
-
-plot( xt, d_nbp/ysc, 'r' )
-
-plot( xt, d_ll/ysc, 'g')
-xlim(tv1([1 end])/xsc)
-legend('post-enc','n3BPert','sec-LL')
 
 % MOID(t) Plot
 plot_moidvstime(5,cons,MOID0,MOIDnbp,MOIDsec)

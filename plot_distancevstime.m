@@ -1,4 +1,4 @@
-function plot_distancevstime(n,cons,xt,tv1,d_pe)
+function plot_distancevstime(n,cons,xt,tv1,d_pe,d_nbp,d_ll)
     F = figure(n);
     clf
     F.Position = [-1203 239 560 189];

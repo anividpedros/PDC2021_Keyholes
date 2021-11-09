@@ -1,4 +1,4 @@
-function plot_moidvstime(n,cons,MOID0,MOIDnbp,MOIDsec)
+function plot_moidvstime(n,cons,tv1,xt,MOID0,MOIDnbp,MOIDsec)
 
 
     F = figure(n);
