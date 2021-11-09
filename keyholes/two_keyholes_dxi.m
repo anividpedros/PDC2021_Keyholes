@@ -102,15 +102,16 @@ for i = 1:nkh*2
             kep0_sma = kep_opik_post';
             kep0_sma(1) = kep0_sma(1)/(1-kep0_sma(2));
             
-            moid0 = MOID_ORCCA_win(K2S(kepE_sma,AU), K2S(kep0_sma,AU));
+%             moid0 = MOID_ORCCA_win(K2S(kepE_sma,AU), K2S(kep0_sma,AU));
+            moid0 = ComputeMOID_mex_MAC(K2S(kepE_sma,AU), K2S(kep0_sma,AU));
             
             At = k * cons.yr;
             % SECULAR PROPAGATION
             secular_model_LL = secular_model_10BP_s2(kep0_sma, cons_sec, 1);
             [~, kep0_LL_t] = drifted_oe_s2( secular_model_LL, At, kep0_sma, cons_sec.OEp);
             
-            moid1 = MOID_ORCCA_win( K2S(kepE_sma,AU), K2S(kep0_LL_t,AU));
-            
+%             moid1 = MOID_ORCCA_win( K2S(kepE_sma,AU), K2S(kep0_LL_t,AU));
+            moid1 = ComputeMOID_mex_MAC(K2S(kepE_sma,AU), K2S(kep0_LL_t,AU));
             dx = moid1 - moid0;
             dx_edges(i) = dx;
             
@@ -127,7 +128,8 @@ for i = 1:nkh*2
             kep0_sma = kep_opik_post';
             kep0_sma(1) = kep0_sma(1)/(1-kep0_sma(2));
             
-            moid0 = MOID_ORCCA_win(K2S(kepE_sma,AU), K2S(kep0_sma,AU));
+%             moid0 = MOID_ORCCA_win(K2S(kepE_sma,AU), K2S(kep0_sma,AU));
+            moid0 = ComputeMOID_mex_MAC(K2S(kepE_sma,AU), K2S(kep0_sma,AU));
             
             At = k * cons.yr;
             
@@ -139,7 +141,8 @@ for i = 1:nkh*2
             kep0_nbp = cspice_oscelt( X(end,:)', cons_ode.t0+tv(end), cons.GMs );
             kep0_nbp(1) = kep0_nbp(1)/(1-kep0_nbp(2));
             
-            moid1 = MOID_ORCCA_win( K2S(kepE_sma,AU), K2S(kep0_nbp,AU) );
+%             moid1 = MOID_ORCCA_win( K2S(kepE_sma,AU), K2S(kep0_nbp,AU) );
+            moid1 = ComputeMOID_mex_MAC(K2S(kepE_sma,AU), K2S(kep0_nbp,AU));
             
             dx = moid1 - moid0;
             dx_edges(i) = dx;
