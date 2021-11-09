@@ -369,7 +369,7 @@ for i = 1:length(tv)
     kep_nbp(i,1) = kep0_nbp(1)/(1-kep0_nbp(2));
    
 %     MOIDnbp(i) = MOID_ORCCA_win( K2S(kepE_sma,cons.AU), K2S(kep_nbp(i,:),cons.AU) ) *cons.AU;
-    MOIDnbp(i) = ComputeMOID( K2S(kep_nbp(i,:)), K2S(kepE_sma)  )*cons.AU;
+    MOIDnbp(i) = ComputeMOID( K2S(kep_nbp(i,:),cons.AU), K2S(kepE_sma,cons.AU) )*cons.AU;
     % Compute distance to Earth
     xe   = cspice_conics(kep_eat, eti+tv(i) );
     d_nbp(i) = norm(xe(1:3) - X(i,1:3)'); % From 4bp integration
@@ -412,10 +412,10 @@ end
 xt = (tv + eti - et0)/cons.yr ;
 
 % Distance(t) Plot
-plot_distancevstime(6,cons,xt,tv1,d_pe)
+plot_distancevstime(6,cons,xt,tv1,d_pe,d_nbp,d_ll)
 
 % MOID(t) Plot
-plot_moidvstime(5,cons,MOID0,MOIDnbp,MOIDsec)
+plot_moidvstime(5,cons,tv1,xt,MOID0,MOIDnbp,MOIDsec)
 
 
 end
@@ -479,14 +479,7 @@ for i=1:nr
     h = circles(i,2);
     D = circles(i,3)/cons.Re;    
     R = circles(i,4)/cons.Re;    
-    
-% %     try
-%     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-%         two_keyholes_dxi_sec(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_sec);
-% %     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-% %           two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
-% %     catch        
-% %     end
+
 
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
         two_keyholes_dxi_num(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_ode);

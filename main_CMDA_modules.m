@@ -275,26 +275,6 @@ plot(xi0/sc, zeta0/sc,'rd','MarkerSize',8)
 % Using keyhole point selected: xi0, zeta0
 [zeta2,theta1,phi1,xi1,zeta1,r_b_post,v_b_post] = opik_next(U_nd,theta,phi,xi0,zeta0,t0,h,m);
 
-
-% %% 6.1. TP to MTP
-% % Rescaling b-plane coordinates: Angular momentum conservation
-% xi1_p   = (U/V)*xi1 ;
-% zeta1_p = (U/V)*zeta1 ;
-% 
-% % Rotation of velocity vector
-% hv     = cross( r_ast_O, v_ast_O );
-% % hv     = cross( r_b_post, v_b_post );
-% 
-% DCM    = PRV_2_DCM( -hgamma, hv/norm(hv) );
-% VVec   = (V/U)*DCM*v_b_post;
-% theta1_p  = acos(VVec(2)/norm(VVec));
-% phi1_p    = atan2(VVec(1),VVec(3));
-% 
-% V_nd = V/(DU/TU);
-% 
-% kep_opik_post = opik_bplane_2_oe( theta1_p,phi1_p,zeta1_p,xi1_p,V_nd,phi1_p,longp,ap )'
-
-
 % 7. Heliocentric orbit elements from post-encounter coordinates (Opik formulae)
 longp = mod( kep_eat(4)+kep_eat(5)+kep_eat(6), 2*pi ) ; % In general sense should be longitude
 longp = atan2( state_eat(2),state_eat(1) );
@@ -309,9 +289,6 @@ kep_opik_post(6) = TA_2_MA(kep_opik_post(6),kep_opik_post(2));
 kep_opik_post(7:8) = [t0 + dt_per;
                         cons.GMs];
 % Include GM of the central body and epoch
-
-% kep_opik_post(1) = a_post_theory*(1-kep_opik_post(2));
-
 
 % 8. Plotting: distance over time with heliocentric elements
 
@@ -479,14 +456,7 @@ for i=1:nr
     h = circles(i,2);
     D = circles(i,3)/cons.Re;    
     R = circles(i,4)/cons.Re;    
-    
-% %     try
-%     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-%         two_keyholes_dxi_sec(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_sec);
-% %     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-% %           two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
-% %     catch        
-% %     end
+
 
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
         two_keyholes_dxi_num(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_ode);
