@@ -34,11 +34,11 @@ addpath(genpath(pwd))
 cspice_furnsh( 'SPICEfiles/naif0012.tls.pc' )
 cspice_furnsh( 'SPICEfiles/gm_de431.tpc' )
 cspice_furnsh( 'SPICEfiles/pck00010.tpc' )
-% cspice_furnsh( 'SPICEfiles/de431_part-1.bsp' )
-% cspice_furnsh( 'SPICEfiles/de431_part-2.bsp' )
-dir_local_de431 = 'C:\Users\Oscar\Documents\Spice-Kernels\';
-cspice_furnsh( [dir_local_de431 'de431_part-1.bsp'] )
-cspice_furnsh( [dir_local_de431 'de431_part-2.bsp'] )
+cspice_furnsh( 'SPICEfiles/de431_part-1.bsp' )
+cspice_furnsh( 'SPICEfiles/de431_part-2.bsp' )
+% dir_local_de431 = 'C:\Users\Oscar\Documents\Spice-Kernels\';
+% cspice_furnsh( [dir_local_de431 'de431_part-1.bsp'] )
+% cspice_furnsh( [dir_local_de431 'de431_part-2.bsp'] )
 
 % 2021 PDC
 cspice_furnsh( 'SPICEfiles/2021_PDC-s11-merged-DE431.bsp' )
@@ -314,7 +314,7 @@ kep0 = kep_opik_post;
 kep0_sma = kep_opik_post';
 kep0_sma(1) = kep0(1)/(1-kep0(2));
 % MOID0 = MOID_SDG_win( kep0_sma([1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
-MOID0 = ComputeMOID(K2S(kep0_sma,cons.AU),K2S(kepE_sma,cons.AU));
+MOID0 = ComputeMOID_mex_MAC(K2S(kep0_sma,cons.AU),K2S(kepE_sma,cons.AU));
 
 % Numerical Integration of point
 eti = et0 + 30*86400 ; % Initial ephemeris time for integration
@@ -349,7 +349,7 @@ for i = 1:length(tv)
     kep_nbp(i,1) = kep0_nbp(1)/(1-kep0_nbp(2));
    
 %     MOIDnbp(i) = MOID_ORCCA_win( K2S(kepE_sma,cons.AU), K2S(kep_nbp(i,:),cons.AU) ) *cons.AU;
-    MOIDnbp(i) = ComputeMOID( K2S(kep_nbp(i,:),cons.AU), K2S(kepE_sma,cons.AU) )*cons.AU;
+    MOIDnbp(i) = ComputeMOID_mex_MAC( K2S(kep_nbp(i,:),cons.AU), K2S(kepE_sma,cons.AU) )*cons.AU;
     % Compute distance to Earth
     xe   = cspice_conics(kep_eat, eti+tv(i) );
     d_nbp(i) = norm(xe(1:3) - X(i,1:3)'); % From 4bp integration
@@ -383,7 +383,7 @@ for i = 1:length(tv)
     d_ll(i) = norm(xe(1:3) - xa(1:3)); 
     
 %     MOIDsec(i) = MOID_SDG_win( kep_LL_t(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
-    MOIDsec(i) = ComputeMOID( K2S(kep_LL_t(i,:),cons.AU), K2S(kepE_sma,cons.AU) )*cons.AU;
+    MOIDsec(i) = ComputeMOID_mex_MAC( K2S(kep_LL_t(i,:),cons.AU), K2S(kepE_sma,cons.AU) )*cons.AU;
     
 end
 
