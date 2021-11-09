@@ -200,7 +200,7 @@ for k=1:kmax
 end
 
 % Plot Valsecchi Circles
-plot_valsecchi_cirles(2,circ,cons,focus_factor) % first input, number of figure
+plot_valsecchi_cirles(2,circ,cons) % first input, number of figure
 
 %% 2. General Keyholes computation
 % Section dependencies: scripts in 'keyholes'
@@ -420,11 +420,10 @@ options=odeset('RelTol',tol,'AbsTol',ones(1,6)*tol);
 [t,X]=ode113(@(t,X) NBP_propagator(t,X,cons_ode),tv,X0,options);
 
 % Postprocessing
-
-
 d_nbp   = zeros(length(tv),1);
 kep_nbp = zeros(length(tv),8);
 MOIDnbp = zeros(length(tv),1);
+
 for i = 1:length(tv)
     kep0_nbp     = cspice_oscelt( X(i,:)', eti+tv(i), cons.GMs );
     kep_nbp(i,:) = kep0_nbp;
@@ -453,6 +452,7 @@ kep_LL_t = zeros(length(tv),6);
 kept = kep0_sma;
 d_ll = zeros(length(tv),1);
 MOIDsec = d_ll;
+
 for i = 1:length(tv)
     
     [~, kep0_LL_t(i,:)] = drifted_oe_s2( secular_model_LL, tv(i), kep0_sma, kepJ_sma' );

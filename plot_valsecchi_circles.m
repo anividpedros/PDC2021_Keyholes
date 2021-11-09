@@ -1,4 +1,4 @@
-function plot_valsecchi_cirles(n,circ,cons,focus_factor)
+function plot_valsecchi_cirles(n,circ,cons)
 
     % Plot Valsecchi circles!
     % n = number of figure
