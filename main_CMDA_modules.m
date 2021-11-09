@@ -34,8 +34,11 @@ addpath(genpath(pwd))
 cspice_furnsh( 'SPICEfiles/naif0012.tls.pc' )
 cspice_furnsh( 'SPICEfiles/gm_de431.tpc' )
 cspice_furnsh( 'SPICEfiles/pck00010.tpc' )
-cspice_furnsh( 'SPICEfiles/de431_part-1.bsp' )
-cspice_furnsh( 'SPICEfiles/de431_part-2.bsp' )
+% cspice_furnsh( 'SPICEfiles/de431_part-1.bsp' )
+% cspice_furnsh( 'SPICEfiles/de431_part-2.bsp' )
+dir_local_de431 = 'C:\Users\Oscar\Documents\Spice-Kernels\';
+cspice_furnsh( [dir_local_de431 'de431_part-1.bsp'] )
+cspice_furnsh( [dir_local_de431 'de431_part-2.bsp'] )
 
 % 2021 PDC
 cspice_furnsh( 'SPICEfiles/2021_PDC-s11-merged-DE431.bsp' )
@@ -201,7 +204,7 @@ plot_valsecchi_circles(2,circ,cons,U,kmax,xi,zeta); % first input, number of fig
 
 %% 2. General Keyholes computation
 % Section dependencies: scripts in 'keyholes'
-[circles,kh_good] = keyhole_computation(3,circ,cons,U,DU,U_nd,theta,phi);
+[circles,kh_good_sec] = keyhole_computation(3,circ,cons,U,DU,U_nd,theta,phi);
 
 %% 3. Keyhole selection: First paper figures
 % Pick flyby from the keyholes and generate ICs
@@ -211,7 +214,7 @@ tf = 20;
 
 for i=1%:66
     
-ic = kh_good(i) ;
+ic = kh_good_sec(i) ;
 ic = 31;
 
 k = circles(ic,1);
@@ -410,7 +413,7 @@ hold on
 
 sc = cons.Re/DU;
 nr = size(circles,1);
-kh_good = [];
+kh_good_sec = [];
 
 % longitude for MOID computation inside
 longp = atan2(state_eat(2),state_eat(1));
@@ -421,8 +424,6 @@ kepE_sma(1) = kep_eat(1)/(1-kep_eat(2));
 
 et0 = t0 + dt_per;
 eti = et0 + 30*86400 ; % Initial ephemeris time for integration
-
-subplot(1,2,2)
 
 % Secular Propagation
 kep_planet = NaN(8,8);
@@ -448,6 +449,11 @@ cons_ode.t0        = eti ;
 cons_ode.GM_vec    = GMvec ; % 1st element is Sun
 cons_ode.IC_planet = kep_planet ; % 1 column per planet
 
+co = winter(22);
+focus_factor = sqrt(1 + 2*cons.GMe/(cons.Re*U^2));
+
+kh_good_sec = [];
+kh_good_num = [];
 
 for i=1:nr
     
@@ -457,12 +463,50 @@ for i=1:nr
     D = circles(i,3)/cons.Re;    
     R = circles(i,4)/cons.Re;    
 
-
+    %-------------------------------------------
+    % Compute secular keyholes
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-        two_keyholes_dxi_num(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_ode);
+        two_keyholes_dxi(k, h, D, R, U_nd, theta, phi, m,0,DU, 2,-1,longp,ap,cons,kepE_sma,cons_sec);
 
     if sum(~isnan(kh_up_xi(:)))
-        fprintf('Keyhole %g found!\n',i)
+        fprintf('Secular Keyhole %g found!\n',i)
+    end
+    
+    subplot(1,2,1)
+    cc = co(k,:);    
+%     cc = [0 1 1];
+%     cc = [1 0 0];
+    plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
+        'Color',cc,'LineWidth',1);
+    pl = plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
+         'Color',cc,'LineWidth',1);
+    
+    drawnow 
+    % Register keyholes with solutions
+%     arcexist = sum(~isnan(kh_up_xi)) + sum(~isnan(kh_down_xi));
+    R1 = sqrt(sum(kh_down_xi.^2 + kh_down_zeta.^2,2));
+    R2 = sqrt(sum(kh_up_xi.^2 + kh_up_zeta.^2,2));
+    arcexist = sum( (R1-RE_au*focus_factor)>0 ) + sum( (R2-RE_au*focus_factor)>0 );
+    
+    arcexist = sum( kh_up_zeta > 2*RE_au*focus_factor );
+%     arcexist = sum( kh_down_zeta < -1.6*RE_au );
+    
+    if arcexist
+        kh_good_sec = [kh_good_sec; i];
+        fprintf('Keyhole num %g exists\n',i)
+    end
+    
+    if length(kh_good_sec) == 1
+        h_list(2) = pl(1);
+    end
+    
+    %-------------------------------------------
+    % Compute Numerical keyholes
+    [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+        two_keyholes_dxi(k, h, D, R, U_nd, theta, phi, m,0,DU, 3,-1,longp,ap,cons,kepE_sma,cons_ode);
+
+    if sum(~isnan(kh_up_xi(:)))
+        fprintf('Numeric Keyhole %g found!\n',i)
     end
     
     subplot(1,2,2)
@@ -485,22 +529,43 @@ for i=1:nr
 %     arcexist = sum( kh_down_zeta < -1.6*RE_au );
     
     if arcexist
-        kh_good = [kh_good; i];
+        kh_good_num = [kh_good_num; i];
         fprintf('Keyhole num %g exists\n',i)
     end
     
-    if length(kh_good) == 1
+    if length(kh_good_num) == 1
         h_list(2) = pl(1);
     end
     
+    
 end
+
+%-------------------------------------------
+subplot(1,2,1)
 colormap(co);
 fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
 plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
 plot(cos(thv), sin(thv),'k--');
 
-legend(h_list,{'post-enc','sec-LL'})
+% legend(h_list,{'post-enc','sec-LL'})
 
+grid on
+axis equal
+caxis([1 20])
+cb = colorbar;
+cb.Label.String = 'k';
+axis([-1 1 -1 1]*5)
+xlabel('\xi (R_\oplus)');
+ylabel('\zeta (R_\oplus)');
+
+%-------------------------------------------
+subplot(1,2,2)
+colormap(co);
+fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
+plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
+plot(cos(thv), sin(thv),'k--');
+
+% legend(h_list,{'post-enc','sec-LL'})
 
 grid on
 axis equal

@@ -250,7 +250,7 @@ RE_au = cons.Re/DU;
 m  = cons.GMe/cons.GMs ;
 circles = circ;
 
-F = figure(3);
+F = figure(4);
 hold on
 
 sc = cons.Re/DU;
@@ -264,8 +264,12 @@ for i=1:nr
     D = circles(i,3)/cons.Re;    
     R = circles(i,4)/cons.Re;    
     
+%     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+%         two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
+
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-        two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
+        two_keyholes_dxi(k, h, D, R, U_nd, theta, phi, m,0,DU,1,-1);
+
     
     cc = co(k,:);    
     plot(kh_down_xi(:,1)/sc,kh_down_zeta(:,1)/sc,kh_down_xi(:,2)/sc,kh_down_zeta(:,2)/sc,...
@@ -580,7 +584,7 @@ kepE_sma(1) = kep_eat(1)/(1-kep_eat(2));
 et0 = t0 + dt_per;
 eti = et0 + 30*86400 ; % Initial ephemeris time for integration
 
-subplot(1,2,2)
+subplot(1,2,2); hold on;
 
 % Secular Propagation
 kep_planet = NaN(8,8);
@@ -615,16 +619,20 @@ for i=1:nr
     D = circles(i,3)/cons.Re;    
     R = circles(i,4)/cons.Re;    
     
-% %     try
+%     try
+    [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+        two_keyholes_dxi_sec(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_sec);
 %     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-%         two_keyholes_dxi_sec(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_sec);
-% %     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-% %           two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
-% %     catch        
-% %     end
+%           two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
+%     catch        
+%     end
+
+%     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
+%         two_keyholes_dxi_num(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_ode);
 
     [kh_up_xi,kh_up_zeta,kh_down_xi,kh_down_zeta] = ...
-        two_keyholes_dxi_num(k, h, D, R, U_nd, theta, phi, m,0,DU,longp,ap,cons,kepE_sma,cons_ode);
+        two_keyholes_dxi(k, h, D, R, U_nd, theta, phi, m,0,DU,2,-1,longp,ap,cons,kepE_sma,cons_sec);
+
 
     if sum(~isnan(kh_up_xi(:)))
         fprintf('Keyhole %g found!\n',i)
@@ -639,7 +647,7 @@ for i=1:nr
     pl = plot(kh_up_xi(:,1)/sc,kh_up_zeta(:,1)/sc,kh_up_xi(:,2)/sc,kh_up_zeta(:,2)/sc,...
          'Color',cc,'LineWidth',1);
     
-    drawnow 
+%     drawnow 
     % Register keyholes with solutions
 %     arcexist = sum(~isnan(kh_up_xi)) + sum(~isnan(kh_down_xi));
     R1 = sqrt(sum(kh_down_xi.^2 + kh_down_zeta.^2,2));
@@ -664,7 +672,7 @@ fill(RE_focussed*cos(thv), RE_focussed*sin(thv),'white');
 plot(RE_focussed*cos(thv), RE_focussed*sin(thv),'k');
 plot(cos(thv), sin(thv),'k--');
 
-legend(h_list,{'post-enc','sec-LL'})
+% legend(h_list,{'post-enc','sec-LL'})
 
 
 grid on
