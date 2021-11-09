@@ -575,3 +575,18 @@ cb.Label.String = 'k';
 axis([-1 1 -1 1]*5)
 xlabel('\xi (R_\oplus)');
 ylabel('\zeta (R_\oplus)');
+
+
+%% 5. Show variation in MOID in neighboring B-plane points
+
+
+
+
+
+
+
+
+
+
+
+
