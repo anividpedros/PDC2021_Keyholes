@@ -374,15 +374,15 @@ MOIDsec = d_ll;
 
 for i = 1:length(tv)
     
-    [~, kep0_LL_t(i,:)] = drifted_oe_s2( secular_model_LL, tv(i), kep0_sma, kepJ_sma' );
-    kept(2:6) = kep0_LL_t(i,2:6); 
-    kept(1)   = kep0_sma(1)*(1-kep0_LL_t(i,2));
+    [~, kep_LL_t(i,:)] = drifted_oe_s2( secular_model_LL, tv(i), kep0_sma, kepJ_sma' );
+    kept(2:6) = kep_LL_t(i,2:6); 
+    kept(1)   = kep0_sma(1)*(1-kep_LL_t(i,2));
     
     xa   = cspice_conics(kept',    eti + tv(i) );
     xe   = cspice_conics(kep_eat,  eti + tv(i) );
     d_ll(i) = norm(xe(1:3) - xa(1:3)); 
     
-%     MOIDsec(i) = MOID_SDG_win( kep0_LL_t(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
+%     MOIDsec(i) = MOID_SDG_win( kep_LL_t(i,[1 2 4 3 5]), kepE_sma([1 2 4 3 5]) );
     MOIDsec(i) = ComputeMOID( K2S(kep_LL_t(i,:),cons.AU), K2S(kepE_sma,cons.AU) )*cons.AU;
     
 end
