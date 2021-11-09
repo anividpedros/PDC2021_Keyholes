@@ -228,7 +228,7 @@ fprintf('Keyhole number %g\n',ic)
     two_keyholes(k, h, D, R, U_nd, theta, phi, m,0,DU);
 
 % Plot selected keyhole
-figure(2)
+figure(4)
 cc = [1 0 0];
 sc = cons.Re/DU;
 
@@ -408,7 +408,7 @@ RE_au = cons.Re/DU;
 m  = cons.GMe/cons.GMs ;
 circles = circ;
 
-F = figure(4);
+F = figure(7);
 hold on
 
 sc = cons.Re/DU;
@@ -473,6 +473,7 @@ for i=1:nr
     end
     
     subplot(1,2,1)
+    hold on
     cc = co(k,:);    
 %     cc = [0 1 1];
 %     cc = [1 0 0];
@@ -510,6 +511,7 @@ for i=1:nr
     end
     
     subplot(1,2,2)
+    hold on
     cc = co(k,:);    
 %     cc = [0 1 1];
 %     cc = [1 0 0];
