@@ -36,9 +36,19 @@ Zb = zeta.*ct1.*cp1 - xi.*sp1 ;
 
 cos_fb1 = ( a1.*(1-e1.*e1) -ap.*(1+Xb) )./( ap.*e1.*(1+Xb) ) ;
 
+if abs(cos_fb1)>1
+    OE1 = ones(1,6)*1i ;
+else
+
+
 fb1 = acos( cos_fb1 ).*sign( sp );
 
 sin_wf1 = ap.*Zb.*(1+e1.*cos(fb1)) ./ ( a1.*(1-e1.*e1).*sin(i1) );
+
+if abs(sin_wf1) > 1
+    sin_wf1 = nan;
+end
+
 wf1 = asin( sin_wf1 );
 if cp < 0
     wf1 = pi - wf1;
@@ -52,3 +62,5 @@ om1_cos = 1+cos(wf1);
 Om1 = wrapTo2Pi( Longp - 2.*atan2( om1_sin , om1_cos ) + sin_wf1.*Yb.*sin(i1)./Zb );
 
 OE1 = [a1(:) e1(:) i1(:) Om1(:) w1(:) fb1];
+
+end
