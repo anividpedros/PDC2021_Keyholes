@@ -20,7 +20,7 @@ c = m/U^2;
 bEarth_au = RE_au*sqrt(1 + 2*c/RE_au);
 
 % Get xi, zeta for the previous ranges of alpha
-nkh = 50;
+nkh = 10;
 [xi_up,zeta_up] = res_circle(linspace(0,pi,nkh),D_au,R_au);
 [xi_down,zeta_down] = res_circle(linspace(-pi,0,nkh),D_au,R_au);
 

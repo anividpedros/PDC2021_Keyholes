@@ -91,9 +91,15 @@ for i = 1:nkh*2
             
             % Post-Encounter Heliocentric Orbit Elements
             kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U,phi,longp,ap)';
-            if ~isreal(kep_opik_post)
+            if isnan(kep_opik_post) | ~isreal(kep_opik_post) 
+                dx = nan ;
+                dx_edges(i) = nan;
+                
+                zeta_edges(i,:) = NaN;
+                xi_edges(i,:)   = NaN;
                 continue
             end
+            
             kep_opik_post(1) = kep_opik_post(1)*(1-kep_opik_post(2))*DU ; % 'opik_bplane_2_oe.m' function returns sma in first element
             kep_opik_post(6) = TA_2_MA(kep_opik_post(6),kep_opik_post(2));% 'opik_bplane_2_oe.m' function returns true anomaly 6th element
             kep_opik_post(7:8) = [t0;
@@ -118,7 +124,15 @@ for i = 1:nkh*2
         case 3  %------- Case NBP integration model ---------
             
             % Post-Encounter Heliocentric Orbit Elements
-            kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U,phi,longp,ap)';
+            kep_opik_post = opik_bplane_2_oe( theta1,phi1,zeta1,xi1,U,phi,longp,ap)';            
+            if isnan(kep_opik_post) | ~isreal(kep_opik_post) 
+                dx = nan ;
+                dx_edges(i) = nan;
+                
+                zeta_edges(i,:) = NaN;
+                xi_edges(i,:)   = NaN;
+                continue
+            end
             
             kep_opik_post(1) = kep_opik_post(1)*(1-kep_opik_post(2))*DU ; % 'opik_bplane_2_oe.m' function returns sma in first element
             kep_opik_post(6) = TA_2_MA(kep_opik_post(6),kep_opik_post(2));% 'opik_bplane_2_oe.m' function returns true anomaly 6th element
