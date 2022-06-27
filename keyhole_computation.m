@@ -1,7 +1,7 @@
 function [circles, kh_good] = keyhole_computation(n,circ,cons,U,DU,U_nd,theta,phi)
     RE_au = cons.Re/DU;
     
-    co = winter(22);
+    co = winter(circ(end,1));
     thv= 0:(2*pi/99):2*pi ;
     focus_factor = sqrt(1 + 2*cons.GMe/(cons.Re*U^2));
 
@@ -10,6 +10,7 @@ function [circles, kh_good] = keyhole_computation(n,circ,cons,U,DU,U_nd,theta,ph
     circles = circ;
 
     F = figure(n);
+    subplot(1,2,2)
     hold on
 
     sc = cons.Re/DU;

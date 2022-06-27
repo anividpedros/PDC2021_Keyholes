@@ -4,9 +4,10 @@ function plot_valsecchi_circles(n,circ,cons,U,kmax,xi,zeta)
     % n = number of figure
 
     F  = figure(n);
-
+    subplot(1,2,1);
+    
     nr = size(circ,1);
-    co = winter(22);
+    co = winter(circ(end,1));
     thv= 0:(2*pi/99):2*pi ;
     sc = cons.Re;
 

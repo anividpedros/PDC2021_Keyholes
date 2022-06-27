@@ -247,10 +247,10 @@ sma_eat = kep_eat(1)/(1-kep_eat(2));
 %------------------------------
 % OPTIONAL MAKE EARTH CIRCULAR
 %------------------------------
-% % Case make Earth circular at every time
-% kep_eat(3) = 0;
-% kep_eat(2) = 0;
-% % kep_eat(1) = sma_eat;
+% Case make Earth circular at every time
+kep_eat(3) = 0;
+kep_eat(2) = 0;
+% kep_eat(1) = sma_eat;
 
 for i = 1:length(iaux)
     
@@ -405,7 +405,7 @@ ylabel('d (au)')
 %% == Post encounter 1 set ==
 
 % Defining a "nominal" time
-id_nom = 72;
+id_nom = 50; %72;
 date_cal = char(CalendarDateTDB(id_nom));
 epoch = [date_cal(7:17) ' TDB'];
 et = cspice_str2et( epoch );
@@ -429,6 +429,11 @@ sma_ast = kep_ast(1)/(1-kep_ast(2));
 figure(25); hold on;
 plot( (tvv)/365.25/86400 + 0.5, d_pe/cons.AU )
 xlim([-0.1 25])
+
+
+%% Whatever que fos que volia el Davide
+
+
 
 
 %% Auxiliar functions

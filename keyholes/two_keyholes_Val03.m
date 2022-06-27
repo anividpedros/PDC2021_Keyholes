@@ -78,7 +78,7 @@ for i = 1:nkh
     % Check if xi1 <= b_Earth
     [~,~,~,xi1,~] = opik_next(U,theta,phi,xi,zeta,t0,h,m);
     dx = -0.35*k*RE_au ;
-    if (abs(xi1) > bEarth_au)
+    if (abs(xi1 + dx) > bEarth_au)
         zeta_edges(i,:) = NaN;
         xi_edges(i,:)   = NaN;
         continue

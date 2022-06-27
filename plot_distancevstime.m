@@ -1,7 +1,7 @@
 function plot_distancevstime(n,cons,xt,tv1,d_pe,d_nbp,d_ll)
     F = figure(n);
-    clf
-    F.Position = [-1203 239 560 189];
+%     clf
+%     F.Position = [-1203 239 560 189];
 
     xsc = cons.yr;
     ysc = cons.AU; %cons.Re;

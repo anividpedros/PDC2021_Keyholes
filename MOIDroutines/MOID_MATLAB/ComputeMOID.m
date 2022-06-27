@@ -305,6 +305,11 @@ function [moid, vA_out, vB_out] = ComputeMOID(A,B)
     moid = sqrt(moid);
     vA_out = -L_m;
     vB_out = -trueB_m;
+
+%     moid = sqrt(vdis(1:N));
+%     vA_out = -vL(1:N);
+%     vB_out = -vtrueB(1:N);
+    
 end
 
 

@@ -65,13 +65,13 @@ for j = 1:np
         al_jk(j,k) = OEp(k,1) / OEp(j,1);
         al = al_jk(j,k);
         
-        b_1_32 = integral( @(p) dLaplace_coeff(p, 1.5, 1, al), 0, 2*pi );
-        b_2_32 = integral( @(p) dLaplace_coeff(p, 1.5, 2, al), 0, 2*pi );
+        b_1_32 = integral2( @(p) dLaplace_coeff(p, 1.5, 1, al), 0, 2*pi );
+        b_2_32 = integral2( @(p) dLaplace_coeff(p, 1.5, 2, al), 0, 2*pi );
         
         b_1_32_jk(j,k) = b_1_32;
         b_2_32_jk(j,k) = b_2_32;
         
-        b_0_32 = integral( @(p) dLaplace_coeff(p,  1.5, 0, al), 0, 2*pi );
+        b_0_32 = integral2( @(p) dLaplace_coeff(p,  1.5, 0, al), 0, 2*pi );
         D_b_0_12 = (b_1_32 - al*b_0_32);
         D_b_0_12_jk(j,k) = D_b_0_12 ;
         

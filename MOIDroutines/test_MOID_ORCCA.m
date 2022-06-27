@@ -16,9 +16,10 @@ B.i     = OE2(3);
 B.Omega = OE2(4);
 B.argp  = OE2(5);
 
-% MOID1 = MOID_SDG_win(OE1([1 2 4 3 5]), OE2([1 2 4 3 5]))
+MOID1 = MOID_SDG_win(OE1([1 2 4 3 5]), OE2([1 2 4 3 5]))
+MOID_ORCCA_win(A,B);
 
-[MOID2, vA, vB] = ComputeMOID(A,B);
+% [MOID2, vA, vB] = ComputeMOID(A,B);
 
 % % Visualization fxns from Oscar's library
 % MOID_plotter(OE1,OE2,0,5);
@@ -30,5 +31,5 @@ B.argp  = OE2(5);
 % rj = coordinates_AnAstro(0, [OE2(1:5) 0 vB], 0,0,1,1);
 % D = norm( ri(1:3) - rj(1:3) );
 
-[MOID3, vA, vB] = ComputeMOID_mex_MAC(A,B)
+% [MOID3, vA, vB] = ComputeMOID_mex_MAC(A,B)
 

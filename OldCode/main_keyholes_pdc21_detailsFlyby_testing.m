@@ -22,6 +22,7 @@ addpath(genpath(pwd))
 %% 0. Constants
 
 mice_local_path = 'C:\Users\Oscar\odrive\Google Drive (2)\MSc-ASEN\Research\Code2020\EncountersCode\mice';
+addpath(genpath('C:\Users\Oscar\Documents\GitHub\PDC2021_Keyholes\SPICEfiles\'))
 % mice_local_de431 = '2nd Author write here your directory';
 
 dir_local_de431 = 'C:\Users\Oscar\Documents\Spice-Kernels\';

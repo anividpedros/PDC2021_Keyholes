@@ -12,8 +12,8 @@ R_au = R*RE_au;
 %% The following part should be included in a loop for all -b_Earth < xi < b_Earth
 
 c = m/U^2;
-% bEarth_au = RE_au*sqrt(1 + 2*c/RE_au);
-bEarth_au = RE_au*4;
+bEarth_au = RE_au*sqrt(1 + 2*c/RE_au);
+% bEarth_au = RE_au;
 
 % Get xi, zeta for the previous ranges of alpha
 nkh = 100;
